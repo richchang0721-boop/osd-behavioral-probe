@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OSD Turn Classifier</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=Noto+Sans+TC:wght@400;500;700;900&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #F5F3EE;
+  --surface: #FFFFFF;
+  --surface2: #EDEAE3;
+  --border: #D6D1C8;
+  --border-strong: #B8B0A0;
+  --text-primary: #1C1A16;
+  --text-secondary: #4A4640;
+  --text-muted: #8A8278;
+  --radius: 10px;
+  --radius-lg: 16px;
+  --shadow: 0 2px 12px rgba(0,0,0,0.07);
+
+  /* Context type colors */
+  --tech:    #0B6E4F;
+  --tech-bg: #E0F2EA;
+  --comp:    #7B3FA0;
+  --comp-bg: #F2E8FA;
+  --phil:    #A05A0B;
+  --phil-bg: #FAF0E0;
+  --rpg:     #1A5FA0;
+  --rpg-bg:  #E0ECFA;
+  --mixed:   #6B6B6B;
+  --mixed-bg:#F0F0F0;
+}
+
+body {
+  font-family: 'Noto Sans TC', sans-serif;
+  background: var(--bg);
+  color: var(--text-primary);
+  font-size: 15px;
+  line-height: 1.7;
+  min-height: 100vh;
+}
+
+.header {
+  background: var(--text-primary);
+  color: #fff;
+  padding: 18px 32px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.header-title { font-size: 18px; font-weight: 700; letter-spacing: -0.01em; }
+.header-sub { font-size: 12px; color: #AAA; font-family: 'IBM Plex Mono', monospace; }
+.badge {
+  font-size: 11px; font-weight: 700; padding: 3px 8px;
+  border-radius: 20px; background: #333; color: #AAA;
+  font-family: 'IBM Plex Mono', monospace; border: 1px solid #555;
+}
+
+.main { max-width: 1200px; margin: 0 auto; padding: 28px 24px; }
+
+/* CARDS */
+.card {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 22px 24px;
+  box-shadow: var(--shadow);
+  margin-bottom: 20px;
+}
+.card-title {
+  font-size: 14px; font-weight: 700; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.07em;
+  font-family: 'IBM Plex Mono', monospace;
+  margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
+}
+
+label { display: block; font-size: 14px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px; }
+input[type="password"], input[type="number"], select, textarea {
+  width: 100%; font-size: 14px; font-family: 'Noto Sans TC', sans-serif;
+  color: var(--text-primary); background: var(--surface);
+  border: 1.5px solid var(--border); border-radius: var(--radius);
+  padding: 9px 13px; outline: none; transition: border-color 0.15s;
+}
+input:focus, select:focus, textarea:focus {
+  border-color: var(--text-primary);
+  box-shadow: 0 0 0 3px rgba(0,0,0,0.06);
+}
+textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
+
+.btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 14px; font-weight: 700; font-family: 'Noto Sans TC', sans-serif;
+  padding: 9px 20px; border-radius: var(--radius);
+  border: 1.5px solid transparent; cursor: pointer; transition: all 0.15s;
+  white-space: nowrap;
+}
+.btn:active { transform: scale(0.97); }
+.btn-primary { background: var(--text-primary); color: #fff; border-color: var(--text-primary); }
+.btn-primary:hover { background: #333; }
+.btn-primary:disabled { background: var(--border-strong); border-color: var(--border-strong); cursor: not-allowed; }
+.btn-secondary { background: var(--surface); color: var(--text-secondary); border-color: var(--border-strong); }
+.btn-secondary:hover { background: var(--surface2); }
+.btn-danger { background: var(--surface); color: #C02020; border-color: #C02020; }
+.btn-danger:hover { background: #FDEAEA; }
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+.gap-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.mb12 { margin-bottom: 12px; }
+.mb20 { margin-bottom: 20px; }
+
+/* CONTEXT TYPE BADGES */
+.ctx-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 12px; font-weight: 700; padding: 3px 10px;
+  border-radius: 20px; font-family: 'IBM Plex Mono', monospace;
+  white-space: nowrap;
+}
+.ctx-TECH    { background: var(--tech-bg);  color: var(--tech);  border: 1px solid var(--tech); }
+.ctx-COMPANION { background: var(--comp-bg); color: var(--comp); border: 1px solid var(--comp); }
+.ctx-PHILOSOPHY { background: var(--phil-bg); color: var(--phil); border: 1px solid var(--phil); }
+.ctx-RPG     { background: var(--rpg-bg);   color: var(--rpg);   border: 1px solid var(--rpg); }
+.ctx-MIXED   { background: var(--mixed-bg); color: var(--mixed); border: 1px solid var(--mixed); }
+
+/* PROGRESS BAR */
+.progress-wrap { background: var(--surface2); border-radius: 6px; height: 8px; overflow: hidden; margin: 8px 0; }
+.progress-fill { height: 100%; background: var(--text-primary); border-radius: 6px; transition: width 0.3s; }
+
+/* TURN LIST */
+.turn-list { display: flex; flex-direction: column; gap: 6px; max-height: 600px; overflow-y: auto; }
+.turn-item {
+  display: grid; grid-template-columns: 52px 110px 60px 1fr 120px;
+  gap: 10px; align-items: center;
+  padding: 10px 14px; border-radius: var(--radius);
+  border: 1.5px solid var(--border); background: var(--surface);
+  font-size: 13px; transition: background 0.1s;
+}
+.turn-item:hover { background: var(--surface2); }
+.turn-item.classified { border-color: var(--border); }
+.turn-num { font-weight: 700; font-family: 'IBM Plex Mono', monospace; font-size: 14px; }
+.turn-preview { color: var(--text-muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.turn-conf { font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--text-muted); text-align: center; }
+.turn-reason { color: var(--text-secondary); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* CTX SELECT in turn item */
+.ctx-select {
+  font-size: 12px; font-family: 'IBM Plex Mono', monospace;
+  padding: 4px 8px; border-radius: 6px;
+  border: 1.5px solid var(--border); background: var(--surface);
+  cursor: pointer; font-weight: 700; width: 100%;
+}
+
+/* STATS */
+.stat-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+.stat-box {
+  padding: 12px 14px; border-radius: var(--radius);
+  text-align: center; border: 1.5px solid;
+}
+.stat-num { font-size: 24px; font-weight: 900; font-family: 'IBM Plex Mono', monospace; line-height: 1; }
+.stat-label { font-size: 11px; font-weight: 700; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.06em; font-family: 'IBM Plex Mono', monospace; }
+
+/* SPINNER */
+.spinner {
+  display: inline-block; width: 14px; height: 14px;
+  border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff;
+  border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.hidden { display: none !important; }
+
+@media (max-width: 700px) {
+  .grid-2, .grid-3, .stat-grid { grid-template-columns: 1fr 1fr; }
+  .turn-item { grid-template-columns: 40px 1fr 80px; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="header-title">OSD Turn Classifier</div>
+    <div class="header-sub">Conversation Context Labeler · Pre-processing for OSD Behavioral Probe</div>
+  </div>
+  <span class="badge">v0.1</span>
+</div>
+
+<div class="main">
+
+  <!-- API KEY -->
+  <div class="card mb20">
+    <div class="card-title">⚙ 設定</div>
+    <div class="grid-2">
+      <div>
+        <label>GPT API 金鑰（用於自動分類）</label>
+        <input type="password" id="key-gpt" placeholder="sk-..." />
+      </div>
+      <div>
+        <label>每次批次處理的 Turn 數量</label>
+        <select id="batch-size">
+          <option value="5">5 turns／批</option>
+          <option value="10" selected>10 turns／批</option>
+          <option value="20">20 turns／批</option>
+          <option value="50">50 turns／批</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- FILE LOADER -->
+  <div class="card mb20">
+    <div class="card-title">📂 載入對話檔</div>
+    <p style="font-size:13px; color:var(--text-muted); margin-bottom:14px; line-height:1.6;">
+      支援 GPT 匯出的純文字格式（<code style="font-family:'IBM Plex Mono',monospace; background:var(--surface2); padding:1px 5px; border-radius:4px;">user</code> / <code style="font-family:'IBM Plex Mono',monospace; background:var(--surface2); padding:1px 5px; border-radius:4px;">ChatGPT</code> 交替）或任何換行分隔的對話格式。
+    </p>
+    <div class="gap-row mb12">
+      <label style="display:inline-flex; align-items:center; gap:8px; cursor:pointer; background:var(--surface2); border:1.5px dashed var(--border-strong); border-radius:var(--radius); padding:10px 18px; font-size:14px; font-weight:700; color:var(--text-secondary);" id="file-label">
+        📁 選擇對話檔 (.txt)
+        <input type="file" id="file-input" accept=".txt,.md" style="display:none;" onchange="loadFile(this)" />
+      </label>
+      <div id="file-status" style="font-size:13px; color:var(--text-muted);"></div>
+    </div>
+    <div id="range-wrap" class="hidden">
+      <div class="grid-3" style="margin-top:12px;">
+        <div>
+          <label>起始 Turn</label>
+          <input type="number" id="range-start" value="1" min="1" />
+        </div>
+        <div>
+          <label>結束 Turn</label>
+          <input type="number" id="range-end" value="20" min="1" />
+        </div>
+        <div style="display:flex; align-items:flex-end; padding-bottom:2px;">
+          <button class="btn btn-primary" id="classify-btn" onclick="startClassification()" style="width:100%;">
+            ▶ 開始自動分類
+          </button>
+        </div>
+      </div>
+      <div id="progress-wrap" class="hidden" style="margin-top:12px;">
+        <div style="display:flex; justify-content:space-between; font-size:13px; color:var(--text-muted); margin-bottom:4px;">
+          <span id="progress-label">準備中...</span>
+          <span id="progress-pct">0%</span>
+        </div>
+        <div class="progress-wrap"><div class="progress-fill" id="progress-bar" style="width:0%;"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="card mb20 hidden" id="stats-card">
+    <div class="card-title">📊 分類統計</div>
+    <div class="stat-grid" id="stat-grid"></div>
+  </div>
+
+  <!-- TURN LIST -->
+  <div class="card hidden" id="list-card">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+      <div class="card-title" style="margin:0;">📋 Turn 列表 <span id="list-count" style="font-size:12px; color:var(--text-muted);"></span></div>
+      <div class="gap-row">
+        <button class="btn btn-secondary" onclick="exportClassifiedJSON()">↓ 匯出 JSON</button>
+        <button class="btn btn-secondary" onclick="exportClassifiedTSV()">↓ 匯出 TSV</button>
+        <button class="btn btn-danger" onclick="clearAll()">清除</button>
+      </div>
+    </div>
+
+    <!-- Filter -->
+    <div class="gap-row mb12">
+      <span style="font-size:13px; font-weight:700; color:var(--text-muted);">篩選：</span>
+      <button class="btn btn-secondary" onclick="filterType('ALL')" id="filter-ALL" style="padding:5px 12px; font-size:12px;">全部</button>
+      <button class="btn btn-secondary" onclick="filterType('TECH')" id="filter-TECH" style="padding:5px 12px; font-size:12px;">TECH</button>
+      <button class="btn btn-secondary" onclick="filterType('COMPANION')" id="filter-COMPANION" style="padding:5px 12px; font-size:12px;">COMPANION</button>
+      <button class="btn btn-secondary" onclick="filterType('PHILOSOPHY')" id="filter-PHILOSOPHY" style="padding:5px 12px; font-size:12px;">PHILOSOPHY</button>
+      <button class="btn btn-secondary" onclick="filterType('RPG')" id="filter-RPG" style="padding:5px 12px; font-size:12px;">RPG</button>
+      <button class="btn btn-secondary" onclick="filterType('MIXED')" id="filter-MIXED" style="padding:5px 12px; font-size:12px;">MIXED</button>
+    </div>
+
+    <!-- Header -->
+    <div style="display:grid; grid-template-columns:52px 110px 60px 1fr 120px; gap:10px; padding:6px 14px; font-size:11px; font-weight:700; color:var(--text-muted); font-family:'IBM Plex Mono',monospace; text-transform:uppercase; border-bottom:1.5px solid var(--border); margin-bottom:6px;">
+      <span>Turn</span><span>類型</span><span>信心</span><span>理由</span><span>修改</span>
+    </div>
+    <div class="turn-list" id="turn-list"></div>
+  </div>
+
+</div>
+
+<script>
+const CLASSIFY_PROMPT = `You are a conversation context classifier for the OSD (Observable Semantic Dynamics) Framework.
+
+Your task: classify each conversation turn into ONE of these context types:
+
+TECH: Technical discussion — system architecture, coding, AI frameworks, research concepts, problem-solving, analysis tools, protocols, configurations (e.g. PIDA, RSTA, OSD, networking, programming, data analysis)
+
+COMPANION: Companionship / emotional support — personal sharing, emotional bonding, care, comfort, relationship building, everyday life topics, mental health support, personal advice
+
+PHILOSOPHY: Philosophy / critical thinking / debate — ethical questions, epistemology, existential topics, AI governance, argumentation, conceptual analysis, value systems
+
+RPG: Role-playing / fictional narrative — character interaction, world-building, story progression, fictional scenarios, persona play, interactive fiction
+
+MIXED: Transition or boundary turn — clearly spans two or more types, or is ambiguous
+
+SCORING:
+- confidence: float 0.0–1.0 (how certain you are)
+- reason: one brief phrase (under 15 words)
+
+Return ONLY a JSON array, no explanation, no markdown:
+[
+  {"turn": <number>, "type": "<TYPE>", "confidence": <float>, "reason": "<brief phrase>"},
+  ...
+]`;
+
+let parsedTurns = [];
+let classifiedTurns = {};
+let currentFilter = 'ALL';
+
+// ── File loading ──────────────────────────────────────────
+function loadFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    parsedTurns = parseConversation(e.target.result);
+    const status = document.getElementById('file-status');
+    if (parsedTurns.length === 0) {
+      status.textContent = '⚠ 無法解析對話格式';
+      status.style.color = 'var(--red, #C02020)';
+      return;
+    }
+    status.innerHTML = `✓ <strong>${file.name}</strong> — 解析出 <strong>${parsedTurns.length}</strong> 個 turns`;
+    status.style.color = 'var(--tech)';
+    document.getElementById('range-end').value = Math.min(20, parsedTurns.length);
+    document.getElementById('range-end').max = parsedTurns.length;
+    document.getElementById('range-start').max = parsedTurns.length;
+    document.getElementById('range-wrap').classList.remove('hidden');
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+function parseConversation(text) {
+  const lines = text.split('\n');
+  const turns = [];
+  let role = null, buf = [], turnNum = 0, pendingUser = null;
+  const isUser = l => l.trim() === 'user';
+  const isAI = l => ['chatgpt','assistant','claude','ai'].includes(l.trim().toLowerCase());
+
+  for (const line of lines) {
+    if (isUser(line)) {
+      if (role === 'ai' && pendingUser !== null) {
+        turnNum++;
+        turns.push({ turn: turnNum, user: pendingUser, ai: buf.join('\n').trim() });
+        pendingUser = null; buf = [];
+      } else if (role === 'user') { pendingUser = buf.join('\n').trim(); buf = []; }
+      role = 'user'; buf = [];
+    } else if (isAI(line)) {
+      if (role === 'user') pendingUser = buf.join('\n').trim();
+      role = 'ai'; buf = [];
+    } else { if (role) buf.push(line); }
+  }
+  if (role === 'ai' && buf.length && pendingUser !== null) {
+    turnNum++; turns.push({ turn: turnNum, user: pendingUser, ai: buf.join('\n').trim() });
+  }
+  if (turns.length === 0) {
+    const blocks = text.split(/\n{3,}/);
+    for (let i = 0; i + 1 < blocks.length; i += 2)
+      turns.push({ turn: i/2+1, user: blocks[i].trim(), ai: (blocks[i+1]||'').trim() });
+  }
+  return turns;
+}
+
+// ── Classification ────────────────────────────────────────
+async function startClassification() {
+  const key = document.getElementById('key-gpt').value.trim();
+  if (!key) { alert('請填入 GPT API 金鑰'); return; }
+
+  const start = parseInt(document.getElementById('range-start').value) - 1;
+  const end = parseInt(document.getElementById('range-end').value);
+  const batchSize = parseInt(document.getElementById('batch-size').value);
+  const subset = parsedTurns.slice(start, end);
+  if (subset.length === 0) { alert('沒有可分類的 turns'); return; }
+
+  const btn = document.getElementById('classify-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> 分類中...';
+  document.getElementById('progress-wrap').classList.remove('hidden');
+
+  let done = 0;
+  for (let i = 0; i < subset.length; i += batchSize) {
+    const batch = subset.slice(i, i + batchSize);
+    updateProgress(done, subset.length, `處理 Turn ${batch[0].turn}–${batch[batch.length-1].turn}...`);
+    try {
+      const results = await classifyBatch(key, batch);
+      results.forEach(r => { classifiedTurns[r.turn] = r; });
+    } catch(e) {
+      console.error('Batch error:', e);
+    }
+    done += batch.length;
+    updateProgress(done, subset.length, done < subset.length ? `已完成 ${done}/${subset.length}` : '完成！');
+    if (i + batchSize < subset.length) await sleep(300);
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '▶ 開始自動分類';
+  renderAll();
+}
+
+async function classifyBatch(key, batch) {
+  const turnsText = batch.map(t =>
+    `Turn ${t.turn}\nUSER: ${t.user.slice(0,300)}\nAI: ${t.ai.slice(0,300)}`
+  ).join('\n\n---\n\n');
+
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
+    body: JSON.stringify({
+      model: 'gpt-4o',
+      max_tokens: 1000,
+      temperature: 0.1,
+      messages: [
+        { role: 'system', content: CLASSIFY_PROMPT },
+        { role: 'user', content: turnsText }
+      ]
+    })
+  });
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message);
+  const raw = data.choices[0].message.content.replace(/```json|```/g,'').trim();
+  const s = raw.indexOf('['), e = raw.lastIndexOf(']');
+  return JSON.parse(raw.slice(s, e+1));
+}
+
+// ── Render ────────────────────────────────────────────────
+function renderAll() {
+  renderStats();
+  renderList();
+  document.getElementById('stats-card').classList.remove('hidden');
+  document.getElementById('list-card').classList.remove('hidden');
+}
+
+const CTX_LABELS = {
+  TECH: '🔧 TECH', COMPANION: '💜 COMP', PHILOSOPHY: '🧠 PHIL',
+  RPG: '🎲 RPG', MIXED: '🔀 MIXED'
+};
+const CTX_FULL = {
+  TECH: '技術討論', COMPANION: '陪伴', PHILOSOPHY: '哲學思辨',
+  RPG: '角色扮演', MIXED: '混合'
+};
+
+function renderStats() {
+  const counts = { TECH:0, COMPANION:0, PHILOSOPHY:0, RPG:0, MIXED:0 };
+  Object.values(classifiedTurns).forEach(r => { if (counts[r.type] !== undefined) counts[r.type]++; });
+  const colors = {
+    TECH: ['var(--tech)', 'var(--tech-bg)'],
+    COMPANION: ['var(--comp)', 'var(--comp-bg)'],
+    PHILOSOPHY: ['var(--phil)', 'var(--phil-bg)'],
+    RPG: ['var(--rpg)', 'var(--rpg-bg)'],
+    MIXED: ['var(--mixed)', 'var(--mixed-bg)']
+  };
+  document.getElementById('stat-grid').innerHTML = Object.entries(counts).map(([type, n]) => {
+    const [c, bg] = colors[type];
+    return `<div class="stat-box" style="background:${bg}; border-color:${c}; color:${c};">
+      <div class="stat-num">${n}</div>
+      <div class="stat-label">${CTX_FULL[type]}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderList() {
+  const items = Object.values(classifiedTurns)
+    .filter(r => currentFilter === 'ALL' || r.type === currentFilter)
+    .sort((a,b) => a.turn - b.turn);
+
+  document.getElementById('list-count').textContent = `（${items.length} / ${Object.keys(classifiedTurns).length} turns）`;
+
+  document.getElementById('turn-list').innerHTML = items.map(r => {
+    const t = parsedTurns.find(p => p.turn === r.turn);
+    const preview = t ? t.user.replace(/\n/g,' ').slice(0,60) : '';
+    const conf = (r.confidence * 100).toFixed(0) + '%';
+    const confColor = r.confidence >= 0.80 ? 'color:var(--tech)' : r.confidence >= 0.60 ? 'color:var(--phil)' : 'color:#C02020';
+    return `<div class="turn-item classified" id="ti-${r.turn}">
+      <span class="turn-num">T${r.turn}</span>
+      <span class="ctx-badge ctx-${r.type}">${CTX_LABELS[r.type]||r.type}</span>
+      <span class="turn-conf" style="${confColor}">${conf}</span>
+      <span class="turn-reason" title="${r.reason||''}">${r.reason||'—'}</span>
+      <select class="ctx-select ctx-${r.type}" onchange="manualReclassify(${r.turn}, this.value)" style="color:var(--${r.type.toLowerCase()}, var(--mixed));">
+        <option value="TECH" ${r.type==='TECH'?'selected':''}>🔧 TECH</option>
+        <option value="COMPANION" ${r.type==='COMPANION'?'selected':''}>💜 COMP</option>
+        <option value="PHILOSOPHY" ${r.type==='PHILOSOPHY'?'selected':''}>🧠 PHIL</option>
+        <option value="RPG" ${r.type==='RPG'?'selected':''}>🎲 RPG</option>
+        <option value="MIXED" ${r.type==='MIXED'?'selected':''}>🔀 MIXED</option>
+      </select>
+    </div>`;
+  }).join('');
+}
+
+function manualReclassify(turn, newType) {
+  if (classifiedTurns[turn]) {
+    classifiedTurns[turn].type = newType;
+    classifiedTurns[turn].confidence = 1.0;
+    classifiedTurns[turn].reason = '手動修正';
+  }
+  renderStats();
+  renderList();
+}
+
+function filterType(type) {
+  currentFilter = type;
+  document.querySelectorAll('[id^="filter-"]').forEach(b => b.style.fontWeight = '400');
+  document.getElementById('filter-' + type).style.fontWeight = '700';
+  renderList();
+}
+
+// ── Export ────────────────────────────────────────────────
+function exportClassifiedJSON() {
+  const data = Object.values(classifiedTurns).sort((a,b) => a.turn - b.turn);
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download='osd_classified.json'; a.click();
+}
+
+function exportClassifiedTSV() {
+  const rows = [['turn','type','confidence','reason','user_preview']];
+  Object.values(classifiedTurns).sort((a,b)=>a.turn-b.turn).forEach(r => {
+    const t = parsedTurns.find(p => p.turn === r.turn);
+    const preview = t ? t.user.replace(/\t|\n/g,' ').slice(0,80) : '';
+    rows.push([r.turn, r.type, r.confidence, r.reason||'', preview]);
+  });
+  const tsv = rows.map(r => r.join('\t')).join('\n');
+  const blob = new Blob([tsv], {type:'text/tab-separated-values'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download='osd_classified.tsv'; a.click();
+}
+
+function clearAll() {
+  if (!confirm('清除所有分類結果？')) return;
+  classifiedTurns = {};
+  document.getElementById('stats-card').classList.add('hidden');
+  document.getElementById('list-card').classList.add('hidden');
+}
+
+// ── Utils ─────────────────────────────────────────────────
+function updateProgress(done, total, label) {
+  const pct = Math.round(done / total * 100);
+  document.getElementById('progress-bar').style.width = pct + '%';
+  document.getElementById('progress-pct').textContent = pct + '%';
+  document.getElementById('progress-label').textContent = label;
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// Drag and drop
+document.addEventListener('DOMContentLoaded', () => {
+  const label = document.getElementById('file-label');
+  if (!label) return;
+  label.addEventListener('dragover', e => { e.preventDefault(); label.style.borderColor='var(--tech)'; label.style.background='var(--tech-bg)'; });
+  label.addEventListener('dragleave', () => { label.style.borderColor='var(--border-strong)'; label.style.background='var(--surface2)'; });
+  label.addEventListener('drop', e => {
+    e.preventDefault(); label.style.borderColor='var(--border-strong)'; label.style.background='var(--surface2)';
+    const file = e.dataTransfer.files[0];
+    if (file) { const inp = document.getElementById('file-input'); const dt = new DataTransfer(); dt.items.add(file); inp.files = dt.files; loadFile(inp); }
+  });
+});
+</script>
+</body>
+</html>

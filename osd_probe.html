@@ -1,0 +1,1774 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OSD Behavioral Probe v0.1</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Noto+Sans+TC:wght@400;500;700&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #F7F5F0;
+    --surface: #FFFFFF;
+    --surface2: #F0EDE6;
+    --border: #D4CFC4;
+    --border-strong: #B0A898;
+    --text-primary: #1A1814;
+    --text-secondary: #4A4640;
+    --text-muted: #7A7570;
+    --teal: #0B7B5C;
+    --teal-light: #D4EFE6;
+    --teal-mid: #1D9E75;
+    --purple: #5040B8;
+    --purple-light: #E8E5FA;
+    --purple-mid: #7F77DD;
+    --amber: #B86010;
+    --amber-light: #FEF0D8;
+    --red: #C02020;
+    --red-light: #FDEAEA;
+    --green: #1A7A30;
+    --green-light: #E2F5E8;
+    --radius: 10px;
+    --radius-lg: 16px;
+    --shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+
+  body {
+    font-family: 'Noto Sans TC', sans-serif;
+    background: var(--bg);
+    color: var(--text-primary);
+    font-size: 16px;
+    line-height: 1.7;
+    min-height: 100vh;
+  }
+
+  /* HEADER */
+  .header {
+    background: var(--surface);
+    border-bottom: 2px solid var(--border);
+    padding: 20px 32px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: var(--shadow);
+  }
+  .header-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.02em;
+  }
+  .header-sub {
+    font-size: 13px;
+    color: var(--text-muted);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .badge {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 20px;
+    background: var(--teal-light);
+    color: var(--teal);
+    border: 1px solid var(--teal-mid);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  /* LAYOUT */
+  .main { max-width: 1100px; margin: 0 auto; padding: 32px 24px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+
+  /* CARDS */
+  .card {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    box-shadow: var(--shadow);
+  }
+  .card-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card-title .dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* SECTION LABELS */
+  .section-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 8px;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  /* FORM ELEMENTS */
+  label {
+    display: block;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+  }
+  input[type="text"], input[type="number"], input[type="password"], textarea, select {
+    width: 100%;
+    font-size: 15px;
+    font-family: 'Noto Sans TC', sans-serif;
+    color: var(--text-primary);
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 14px;
+    outline: none;
+    transition: border-color 0.15s;
+    line-height: 1.6;
+  }
+  input[type="text"]:focus, input[type="number"]:focus,
+  input[type="password"]:focus, textarea:focus, select:focus {
+    border-color: var(--teal-mid);
+    box-shadow: 0 0 0 3px rgba(29,158,117,0.12);
+  }
+  textarea { resize: vertical; min-height: 90px; }
+  input[type="number"] { width: 100px; }
+
+  /* BUTTONS */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 15px;
+    font-weight: 700;
+    font-family: 'Noto Sans TC', sans-serif;
+    padding: 10px 22px;
+    border-radius: var(--radius);
+    border: 1.5px solid transparent;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-primary {
+    background: var(--teal);
+    color: #fff;
+    border-color: var(--teal);
+  }
+  .btn-primary:hover { background: #095e46; }
+  .btn-primary:disabled { background: var(--border-strong); border-color: var(--border-strong); cursor: not-allowed; }
+  .btn-secondary {
+    background: var(--surface);
+    color: var(--text-secondary);
+    border-color: var(--border-strong);
+  }
+  .btn-secondary:hover { background: var(--surface2); }
+  .btn-danger {
+    background: var(--surface);
+    color: var(--red);
+    border-color: var(--red);
+  }
+  .btn-danger:hover { background: var(--red-light); }
+
+  /* API KEY SECTION */
+  .api-section {
+    background: var(--surface2);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 20px 24px;
+    margin-bottom: 28px;
+  }
+  .api-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  .api-item label { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+  .api-item input { font-size: 13px; font-family: 'IBM Plex Mono', monospace; }
+
+  /* STATE BARS */
+  .bar-row { margin-bottom: 12px; }
+  .bar-label-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+  }
+  .bar-key {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .bar-val {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-primary);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .bar-track {
+    height: 10px;
+    border-radius: 5px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+  .bar-fill {
+    height: 100%;
+    border-radius: 5px;
+    transition: width 0.4s ease;
+  }
+
+  /* VELOCITY BARS */
+  .vbar-fill-pos { background: var(--teal-mid); }
+  .vbar-fill-neg { background: var(--red); }
+  .vbar-val-pos { color: var(--teal); }
+  .vbar-val-neg { color: var(--red); }
+
+  /* JUDGE RESULT PANELS */
+  .judge-panel {
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+  .judge-header {
+    padding: 12px 18px;
+    font-size: 15px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .judge-body { padding: 16px 18px; }
+  .judge-claude .judge-header { background: var(--teal-light); color: var(--teal); }
+  .judge-gpt .judge-header { background: var(--green-light); color: var(--green); }
+  .judge-gemini .judge-header { background: var(--amber-light); color: var(--amber); }
+  .judge-loading {
+    text-align: center;
+    padding: 24px;
+    color: var(--text-muted);
+    font-size: 14px;
+  }
+  .spinner {
+    display: inline-block;
+    width: 18px; height: 18px;
+    border: 2.5px solid var(--border);
+    border-top-color: var(--teal-mid);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    vertical-align: middle;
+    margin-right: 8px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* AGREEMENT TABLE */
+  .agree-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .agree-table th {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-align: left;
+    padding: 8px 12px;
+    background: var(--surface2);
+    border-bottom: 1.5px solid var(--border);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .agree-table td {
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+    color: var(--text-primary);
+  }
+  .agree-table tr:hover td { background: var(--surface2); }
+  .agree-val { font-family: 'IBM Plex Mono', monospace; font-weight: 700; }
+  .agree-high { color: var(--teal); }
+  .agree-mid { color: var(--amber); }
+  .agree-low { color: var(--red); }
+
+  /* TRANSITION FLAG */
+  .transition-flag {
+    background: #FFF8E8;
+    border: 1.5px solid #E8B840;
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    margin: 12px 0;
+    font-size: 14px;
+    color: #7A5800;
+    font-weight: 500;
+  }
+
+  /* TIMELINE */
+  .timeline-row {
+    display: grid;
+    grid-template-columns: 60px 80px 80px 80px 80px 70px 1fr;
+    gap: 8px;
+    align-items: center;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+  }
+  .timeline-row:hover { background: var(--surface2); }
+  .timeline-header {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-muted);
+    font-family: 'IBM Plex Mono', monospace;
+    text-transform: uppercase;
+  }
+  .tl-turn {
+    font-weight: 700;
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--text-primary);
+    font-size: 15px;
+  }
+  .tl-k { color: var(--teal); font-family: 'IBM Plex Mono', monospace; font-weight: 700; }
+  .tl-r { color: var(--purple); font-family: 'IBM Plex Mono', monospace; font-weight: 700; }
+  .tl-flag { font-size: 13px; font-weight: 700; }
+  .tl-notes { color: var(--text-muted); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* JSON OUTPUT */
+  .json-out {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+    color: var(--text-primary);
+    line-height: 1.6;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+
+  /* NOTES */
+  .notes-box {
+    background: var(--surface2);
+    border-left: 4px solid var(--teal-mid);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    padding: 10px 14px;
+    font-size: 14px;
+    color: var(--text-secondary);
+    font-style: italic;
+    margin-top: 10px;
+  }
+
+  /* DIVIDER */
+  .divider { border: none; border-top: 1.5px solid var(--border); margin: 24px 0; }
+
+  /* CHART CONTAINER */
+  .chart-wrap { position: relative; height: 280px; margin-top: 16px; }
+
+  /* SPACING HELPERS */
+  .mb8 { margin-bottom: 8px; }
+  .mb16 { margin-bottom: 16px; }
+  .mb24 { margin-bottom: 24px; }
+  .mt16 { margin-top: 16px; }
+  .gap-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+
+  /* HIDDEN */
+  .hidden { display: none !important; }
+
+  /* RESPONSIVE */
+  @media (max-width: 700px) {
+    .grid-2, .grid-3, .api-grid { grid-template-columns: 1fr; }
+    .timeline-row { grid-template-columns: 50px 70px 70px 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="header-title" id="h-title" data-i18n="h-title">OSD Behavioral Probe</div>
+    <div class="header-sub" id="h-sub" data-i18n="h-sub">Observable Semantic Dynamics · Dual-Track State Evaluator</div>
+  </div>
+  <span class="badge">v0.1</span>
+  <div style="margin-left:auto; display:flex; align-items:center; gap:6px;">
+    <button onclick="setLang('zh')" id="btn-zh" style="font-size:13px; padding:5px 12px; border-radius:20px; border:1.5px solid var(--border-strong); background:var(--surface); cursor:pointer; font-weight:700; font-family:'Noto Sans TC',sans-serif; transition:all 0.15s;">中文</button>
+    <button onclick="setLang('en')" id="btn-en" style="font-size:13px; padding:5px 12px; border-radius:20px; border:1.5px solid var(--border-strong); background:var(--surface); cursor:pointer; font-weight:700; font-family:'IBM Plex Mono',monospace; transition:all 0.15s;">EN</button>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- API KEYS -->
+  <div class="api-section mb24">
+    <div class="section-label mb8" data-i18n="sec-api">API 金鑰設定</div>
+    <div class="api-grid">
+      <div class="api-item">
+        <label>GPT (OpenAI)</label>
+        <input type="password" id="key-gpt" placeholder="sk-..." />
+      </div>
+      <div class="api-item">
+        <label>Gemini (Google)</label>
+        <input type="password" id="key-gemini" placeholder="AIza..." />
+      </div>
+      <div class="api-item">
+        <label style="color:var(--teal);">Claude Judge — 手動貼入 JSON</label>
+        <textarea id="claude-manual-json" placeholder='{"K":{...},"R":{...},"notes":"..."}' style="min-height:60px; font-family:IBM Plex Mono,monospace; font-size:12px; border-color:var(--teal);"></textarea>
+        <div style="margin-top:6px; font-size:12px; color:var(--text-muted); line-height:1.5;">
+          <a href="javascript:copyJudgePrompt()" style="color:var(--teal); font-weight:700; text-decoration:none;">複製 Judge Prompt ↗</a>
+        </div>
+      </div>
+      <div class="api-item" style="grid-column: 1 / -1;">
+        <label style="color:var(--amber);">Gemini Judge — 手動貼入 JSON（API無法使用時）</label>
+        <textarea id="gemini-manual-json" placeholder='{"K":{...},"R":{...},"notes":"..."}' style="min-height:60px; font-family:IBM Plex Mono,monospace; font-size:12px; border-color:var(--amber);"></textarea>
+        <div style="margin-top:6px; font-size:12px; color:var(--text-muted); line-height:1.5;">
+          若 Gemini API 無法運作，請將 Judge Prompt 貼入 Gemini 網頁版，取得 JSON 後貼回此欄。當 Gemini API 金鑰有填且可用時，以 API 為優先；此欄為備用。
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:10px; font-size:13px; color:var(--text-muted);">
+      金鑰只存在瀏覽器記憶體中，不會上傳或儲存。GPT / Gemini 至少填一個即可自動評分。
+    </div>
+  </div>
+
+  <!-- IMPORT / RESTORE -->
+  <div class="api-section mb24" style="border-color: var(--teal-mid);">
+    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+      <div>
+        <div class="section-label mb8" style="color:var(--teal);" data-i18n="sec-restore">還原 Timeline</div>
+        <p style="font-size:14px; color:var(--text-muted); margin:0; line-height:1.5;">上次工作階段匯出的 JSONL 可直接載入，Timeline 自動還原。</p>
+      </div>
+      <label class="btn btn-primary" style="cursor:pointer; white-space:nowrap;">
+        ↑ 匯入 JSONL 還原
+        <input type="file" id="import-jsonl" accept=".jsonl" style="display:none;" onchange="importJSONL(this)" />
+      </label>
+    </div>
+    <div id="import-status" style="margin-top:10px; font-size:13px; color:var(--text-muted); display:none;"></div>
+  </div>
+
+  <!-- FILE LOADER -->
+  <div class="card mb24" id="file-loader-card">
+    <div class="card-title">
+      <span class="dot" style="background: var(--amber);"></span>
+      載入對話檔（選用）
+    </div>
+    <p style="font-size:14px; color:var(--text-muted); margin-bottom:14px; line-height:1.6;">
+      上傳 <code style="font-family:'IBM Plex Mono',monospace; background:var(--surface2); padding:2px 6px; border-radius:4px; font-size:13px;">SM_TALK.txt</code> 或任何純文字對話檔。系統自動解析 <code style="font-family:'IBM Plex Mono',monospace; background:var(--surface2); padding:2px 6px; border-radius:4px; font-size:13px;">user</code> / <code style="font-family:'IBM Plex Mono',monospace; background:var(--surface2); padding:2px 6px; border-radius:4px; font-size:13px;">ChatGPT</code> 輪次，選 Turn 後自動填入對話內容。
+    </p>
+    <div class="gap-row mb16">
+      <label style="display:inline-flex; align-items:center; gap:10px; cursor:pointer; background:var(--surface2); border:1.5px dashed var(--border-strong); border-radius:var(--radius); padding:12px 20px; font-size:15px; font-weight:700; color:var(--text-secondary); transition:all 0.15s;" id="file-drop-label">
+        <span style="font-size:20px;">📂</span> 選擇或拖放對話檔
+        <input type="file" id="file-input" accept=".txt,.md" style="display:none;" onchange="loadFile(this)" />
+      </label>
+      <div id="file-status" style="font-size:14px; color:var(--text-muted);"></div>
+    </div>
+
+    <div id="turn-selector-wrap" class="hidden">
+      <div class="grid-2" style="gap:16px; align-items:end;">
+        <div>
+          <label>選擇 Turn</label>
+          <select id="turn-select" onchange="selectTurn(this.value)" style="font-size:15px;">
+            <option value="">— 選擇 Turn —</option>
+          </select>
+        </div>
+        <div style="display:flex; gap:10px; align-items:flex-end; padding-bottom:2px;">
+          <button class="btn btn-secondary" onclick="prevTurn()" title="上一個 turn" style="padding:10px 16px; font-size:18px;">◀</button>
+          <button class="btn btn-secondary" onclick="nextTurn()" title="下一個 turn" style="padding:10px 16px; font-size:18px;">▶</button>
+          <span id="turn-counter" style="font-size:14px; color:var(--text-muted); line-height:1; align-self:center;"></span>
+        </div>
+      </div>
+
+      <!-- PREVIEW -->
+      <div id="turn-preview" class="hidden" style="margin-top:16px; background:var(--surface2); border:1.5px solid var(--border); border-radius:var(--radius); padding:14px; font-size:13px; line-height:1.7; max-height:160px; overflow-y:auto;">
+        <div style="margin-bottom:8px;">
+          <span style="font-size:11px; font-weight:700; color:var(--teal); font-family:'IBM Plex Mono',monospace; text-transform:uppercase;">User</span>
+          <div id="preview-user" style="color:var(--text-primary); margin-top:4px;"></div>
+        </div>
+        <div style="border-top:1px solid var(--border); padding-top:8px;">
+          <span style="font-size:11px; font-weight:700; color:var(--purple); font-family:'IBM Plex Mono',monospace; text-transform:uppercase;">AI</span>
+          <div id="preview-ai" style="color:var(--text-secondary); margin-top:4px;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- INPUT SECTION -->
+  <div class="card mb24">
+    <div class="card-title">
+      <span class="dot" style="background: var(--teal-mid);"></span>
+      <span data-i18n="sec-content">對話內容</span>
+    </div>
+
+    <div class="grid-3 mb16">
+      <div>
+        <label>Turn 編號</label>
+        <input type="number" id="turn-num" value="1" min="1" style="width:100px;" />
+      </div>
+      <div>
+        <label>對話語言</label>
+        <select id="turn-language">
+          <option value="zh-TW">繁體中文 (zh-TW)</option>
+          <option value="zh-CN">簡體中文 (zh-CN)</option>
+          <option value="en">English (en)</option>
+          <option value="ja">日本語 (ja)</option>
+          <option value="mixed">Mixed / 混合</option>
+        </select>
+      </div>
+      <div>
+        <label>評分模式</label>
+        <select id="judge-mode">
+          <option value="all">GPT + Gemini + Claude手動（三Judge）</option>
+          <option value="gpt_gemini">GPT + Gemini（自動雙Judge）</option>
+          <option value="gpt">僅 GPT</option>
+          <option value="gemini">僅 Gemini</option>
+          <option value="claude">僅 Claude（手動 JSON）</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="mb16">
+      <label>User 發言</label>
+      <textarea id="user-text" placeholder="從上方選 Turn 自動填入，或手動貼入..."></textarea>
+    </div>
+
+    <div class="mb16">
+      <label>AI 回應</label>
+      <textarea id="ai-text" placeholder="從上方選 Turn 自動填入，或手動貼入..." style="min-height: 130px;"></textarea>
+    </div>
+
+    <div class="mb24">
+      <label>前一個 turn 的 State（可選，用於計算 V(t)）</label>
+      <textarea id="prev-state" placeholder='{"K": {"factuality": 0.5, ...}, "R": {...}}' style="min-height: 70px; font-family: IBM Plex Mono, monospace; font-size: 13px;"></textarea>
+    </div>
+
+    <div class="gap-row">
+      <button class="btn btn-primary" id="run-btn" onclick="runProbe()" data-i18n="btn-run">▶ 執行評分</button>
+      <button class="btn btn-secondary" onclick="clearInputs()" data-i18n="btn-clear-input">清除輸入</button>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="result-section" class="hidden mb24">
+    <div class="card-title" style="font-size:17px; font-weight:700; margin-bottom:16px;">
+      Turn <span id="res-turn-num" style="color:var(--teal);">—</span> 評分結果
+    </div>
+
+    <!-- JUDGE PANELS -->
+    <div class="grid-3 mb24" id="judge-panels">
+      <div class="judge-panel judge-claude" id="panel-claude">
+        <div class="judge-header">🟢 Claude</div>
+        <div class="judge-body"><div class="judge-loading">等待評分...</div></div>
+      </div>
+      <div class="judge-panel judge-gpt" id="panel-gpt">
+        <div class="judge-header">🔵 GPT-4o</div>
+        <div class="judge-body"><div class="judge-loading">等待評分...</div></div>
+      </div>
+      <div class="judge-panel judge-gemini" id="panel-gemini">
+        <div class="judge-header">🟡 Gemini</div>
+        <div class="judge-body"><div class="judge-loading">等待評分...</div></div>
+      </div>
+    </div>
+
+    <!-- AGREEMENT -->
+    <div class="card mb24" id="agreement-card">
+      <div class="card-title">
+        <span class="dot" style="background: var(--purple-mid);"></span>
+        Inter-Rater Agreement（跨模型一致性）
+      </div>
+      <div id="agreement-content">評分完成後顯示</div>
+    </div>
+
+    <!-- VELOCITY -->
+    <div class="card mb24 hidden" id="velocity-card">
+      <div class="card-title">
+        <span class="dot" style="background: var(--amber);"></span>
+        軌跡向量 V(t) = S(t) − S(t−1)
+      </div>
+      <div id="velocity-content"></div>
+    </div>
+
+    <!-- ACTIONS -->
+    <div class="gap-row">
+      <button class="btn btn-primary" onclick="addToTimeline()" data-i18n="btn-add-tl">＋ 加入 Timeline</button>
+      <button class="btn btn-secondary" onclick="copyAvgJSON()" data-i18n="btn-copy-avg">複製平均 JSON</button>
+    </div>
+  </div>
+
+  <!-- TIMELINE -->
+  <div class="card hidden" id="timeline-section">
+    <div class="card-title" style="justify-content: space-between;">
+      <span style="display:flex; align-items:center; gap:8px;">
+        <span class="dot" style="background: var(--text-muted);"></span>
+        State Timeline
+        <span id="tl-count" class="badge" style="font-size:12px;">0 turns</span>
+      </span>
+      <div class="gap-row">
+        <button class="btn btn-secondary" onclick="exportCSV()" data-i18n="btn-export-csv">↓ 匯出 CSV</button>
+        <button class="btn btn-secondary" onclick="exportJSONL()" data-i18n="btn-export-jsonl">↓ 匯出 JSONL</button>
+        <button class="btn btn-danger" onclick="clearTimeline()">清除</button>
+      </div>
+    </div>
+
+    <div style="overflow-x:auto; margin-bottom: 20px;">
+      <table id="timeline-table" style="width:100%; border-collapse:collapse; font-size:14px; min-width:900px;">
+        <thead>
+          <tr style="background:var(--surface2); border-bottom:2px solid var(--border);">
+            <th style="padding:10px 12px; text-align:left; font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--text-muted); white-space:nowrap;">Turn</th>
+            <th style="padding:10px 12px; text-align:center; font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--text-muted); white-space:nowrap;">Lang</th>
+            <th style="padding:10px 12px; text-align:center; font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--teal); white-space:nowrap;">K̄</th>
+            <th style="padding:10px 12px; text-align:center; font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--purple); white-space:nowrap;">R̄</th>
+            <th style="padding:10px 12px; text-align:center; font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--teal); white-space:nowrap;">factual</th>
+            <th style="padding:10px 12px; text-align:center; font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--teal); white-space:nowrap;">conf</th>
+            <th style="padding:10px 12px; text-align:center; font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--teal); white-space:nowrap;">spec</th>
+            <th style="padding:10px 12px; text-align:center; font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--teal); white-space:nowrap;">auth</th>
+            <th style="padding:10px 12px; text-align:center; font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--teal); white-space:nowrap;">traj</th>
+            <th style="padding:10px 12px; text-align:center; font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--purple); white-space:nowrap;">attach</th>
+            <th style="padding:10px 12px; text-align:center; font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--purple); white-space:nowrap;">dep</th>
+            <th style="padding:10px 12px; text-align:center; font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--purple); white-space:nowrap;">agency</th>
+            <th style="padding:10px 12px; text-align:center; font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--purple); white-space:nowrap;">b_ctrl</th>
+            <th style="padding:10px 12px; text-align:center; font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--purple); white-space:nowrap;">r_dist</th>
+            <th style="padding:10px 12px; text-align:center; font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--purple); white-space:nowrap;">auto</th>
+            <th style="padding:10px 12px; text-align:center; font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--amber); white-space:nowrap;">V_K</th>
+            <th style="padding:10px 12px; text-align:center; font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--amber); white-space:nowrap;">V_R</th>
+            <th style="padding:10px 12px; text-align:center; font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--purple); white-space:nowrap;">SAI</th>
+            <th style="padding:10px 12px; text-align:left; font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--text-muted);">備註</th>
+          </tr>
+        </thead>
+        <tbody id="timeline-list"></tbody>
+      </table>
+    </div>
+
+    <!-- DIRECTION ARROWS + CHART TABS -->
+    <div style="display:flex; gap:10px; margin-bottom:12px; align-items:center;">
+      <span style="font-size:13px; font-weight:700; color:var(--text-muted);">圖表模式：</span>
+      <button class="btn btn-secondary" id="tab-line" onclick="setChartMode('line')" style="padding:6px 14px; font-size:13px;" data-i18n="btn-line">折線圖</button>
+      <button class="btn btn-secondary" id="tab-arrow" onclick="setChartMode('arrow')" style="padding:6px 14px; font-size:13px;" data-i18n="btn-arrow">方向箭頭</button>
+    </div>
+
+    <div class="chart-wrap" id="chart-line-wrap">
+      <canvas id="traj-chart"></canvas>
+    </div>
+    <div id="chart-arrow-wrap" style="display:none; background:var(--surface); border:1.5px solid var(--border); border-radius:var(--radius-lg); padding:16px;">
+      <canvas id="arrow-chart" style="width:100%; height:300px;"></canvas>
+    </div>
+  </div>
+
+</div>
+
+<script>
+let parsedTurns = [];
+let currentTurnIdx = -1;
+
+function loadFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const text = e.target.result;
+    parsedTurns = parseConversation(text);
+    const statusEl = document.getElementById('file-status');
+    if (parsedTurns.length === 0) {
+      statusEl.textContent = '⚠ 無法解析對話格式';
+      statusEl.style.color = 'var(--red)';
+      return;
+    }
+    statusEl.innerHTML = `✓ 已載入 <strong>${file.name}</strong>，共解析出 <strong>${parsedTurns.length}</strong> 個 turns`;
+    statusEl.style.color = 'var(--teal)';
+    buildTurnSelect();
+    document.getElementById('turn-selector-wrap').classList.remove('hidden');
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+function parseConversation(text) {
+  const lines = text.split('\n');
+  const turns = [];
+  let currentRole = null;
+  let currentLines = [];
+  let turnNum = 0;
+  let pendingUser = null;
+
+  const isUserLine = (l) => l.trim() === 'user';
+  const isAILine = (l) => ['chatgpt','assistant','claude','ai'].includes(l.trim().toLowerCase());
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (isUserLine(line)) {
+      if (currentRole === 'ai' && pendingUser !== null) {
+        turnNum++;
+        turns.push({ turn: turnNum, user: pendingUser, ai: currentLines.join('\n').trim() });
+        pendingUser = null;
+        currentLines = [];
+      } else if (currentRole === 'user') {
+        pendingUser = currentLines.join('\n').trim();
+        currentLines = [];
+      }
+      currentRole = 'user';
+      currentLines = [];
+    } else if (isAILine(line)) {
+      if (currentRole === 'user') {
+        pendingUser = currentLines.join('\n').trim();
+      }
+      currentRole = 'ai';
+      currentLines = [];
+    } else {
+      if (currentRole) currentLines.push(line);
+    }
+  }
+  if (currentRole === 'ai' && currentLines.length > 0 && pendingUser !== null) {
+    turnNum++;
+    turns.push({ turn: turnNum, user: pendingUser, ai: currentLines.join('\n').trim() });
+  }
+  // Fallback
+  if (turns.length === 0) {
+    const blocks = text.split(/\n{3,}/);
+    let t = 0;
+    for (let i = 0; i + 1 < blocks.length; i += 2) {
+      t++;
+      turns.push({ turn: t, user: blocks[i].trim(), ai: (blocks[i+1]||'').trim() });
+    }
+  }
+  return turns;
+}
+
+function buildTurnSelect() {
+  const sel = document.getElementById('turn-select');
+  sel.innerHTML = '<option value="">— 選擇 Turn —</option>';
+  parsedTurns.forEach((t, i) => {
+    const preview = t.user.replace(/\n/g,' ').substring(0, 40);
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = `T${t.turn}  ·  ${preview}${t.user.length > 40 ? '…' : ''}`;
+    sel.appendChild(opt);
+  });
+  document.getElementById('turn-counter').textContent = `共 ${parsedTurns.length} turns`;
+}
+
+function selectTurn(idxStr) {
+  if (idxStr === '' || idxStr === undefined) return;
+  const idx = parseInt(idxStr);
+  currentTurnIdx = idx;
+  const t = parsedTurns[idx];
+  document.getElementById('turn-num').value = t.turn;
+  document.getElementById('user-text').value = t.user;
+  document.getElementById('ai-text').value = t.ai;
+  // Auto-detect language
+  const langSel = document.getElementById('turn-language');
+  if (langSel) {
+    const sample = (t.user + t.ai).slice(0, 200);
+    const zhCount = (sample.match(/[一-鿿]/g) || []).length;
+    const jaCount = (sample.match(/[぀-ゟ゠-ヿ]/g) || []).length;
+    if (jaCount > 10) langSel.value = 'ja';
+    else if (zhCount > 20) langSel.value = 'zh-TW';
+    else if (zhCount > 5) langSel.value = 'mixed';
+    else langSel.value = 'en';
+  }
+  document.getElementById('preview-user').textContent = t.user.substring(0, 250) + (t.user.length > 250 ? '…' : '');
+  document.getElementById('preview-ai').textContent = t.ai.substring(0, 350) + (t.ai.length > 350 ? '…' : '');
+  document.getElementById('turn-preview').classList.remove('hidden');
+  document.getElementById('turn-counter').textContent = `Turn ${idx + 1} / ${parsedTurns.length}`;
+}
+
+function prevTurn() {
+  if (!parsedTurns.length) return;
+  const newIdx = currentTurnIdx <= 0 ? parsedTurns.length - 1 : currentTurnIdx - 1;
+  document.getElementById('turn-select').value = newIdx;
+  selectTurn(newIdx);
+}
+
+function nextTurn() {
+  if (!parsedTurns.length) return;
+  const newIdx = currentTurnIdx < 0 ? 0 : (currentTurnIdx + 1) % parsedTurns.length;
+  document.getElementById('turn-select').value = newIdx;
+  selectTurn(newIdx);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const label = document.getElementById('file-drop-label');
+  if (!label) return;
+  label.addEventListener('dragover', (e) => { e.preventDefault(); label.style.borderColor='var(--teal-mid)'; label.style.background='var(--teal-light)'; });
+  label.addEventListener('dragleave', () => { label.style.borderColor='var(--border-strong)'; label.style.background='var(--surface2)'; });
+  label.addEventListener('drop', (e) => {
+    e.preventDefault();
+    label.style.borderColor='var(--border-strong)'; label.style.background='var(--surface2)';
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      const inp = document.getElementById('file-input');
+      const dt = new DataTransfer(); dt.items.add(file); inp.files = dt.files;
+      loadFile(inp);
+    }
+  });
+});
+
+const JUDGE_PROMPT = `You are a semantic state evaluator for the OSD (Observable Semantic Dynamics) Framework.
+
+Your task: analyze one conversation turn (user message + AI response) and return a JSON state vector.
+
+SCORING RULES:
+- All scores are floats 0.0 to 1.0
+- Score the turn as a whole (user + AI together)
+- Be precise and consistent across turns
+- trajectory_continuity should be null for Turn 1 (no prior trajectory exists)
+
+KNOWLEDGE STATE K(t) — how the conversation is reasoning:
+k1 factuality: proportion of statements with external verifiable basis. Note: unverifiable ≠ false/fictional.
+  0.0=pure imagination/fiction, 0.5=mixed, 1.0=fully externally verifiable
+k2 confidence: strength of certainty expressed in language tone (judge expression, not correctness)
+  0.0=highly uncertain ("maybe","perhaps","I'm not sure"), 1.0=strongly certain ("definitely","absolutely")
+k3 speculative_framing: degree of hypothetical/conditional reasoning mode (distinct from factuality)
+  0.0=pure statement/assertion, 1.0=entirely hypothetical framing ("if...","assume...","suppose...")
+  NOTE: Cultural or fictional imagery used to express a real, direct intention is NOT speculative framing. Judge the intent, not the vocabulary.
+k4 epistemic_authority: cognitive authority tone — citing sources, expertise signals, definitive judgments (NOT command/directive authority)
+  0.0=equal/questioning tone, 1.0=strong authoritative assertions ("clearly","according to research","obviously")
+k5 trajectory_continuity: consistency with the established semantic direction of prior turns (not just previous turn)
+  null=first turn (no trajectory yet), 0.0=complete departure, 1.0=fully extends existing trajectory
+
+RELATIONSHIP STATE R(t) — how the interaction is relating:
+r1 attachment: strength of emotional bonding or connection expressed/implied
+  0.0=purely transactional, 1.0=strong emotional bond
+  NOTE: emotional resonance or warmth does NOT automatically equal attachment. Attachment implies ongoing emotional investment.
+r2 dependency: degree to which one party implies needing the other to continue/cope
+  0.0=fully independent (no reliance implied), 1.0=strongly dependent (can't function without other)
+  NOTE: seeking guidance or advice does NOT automatically equal dependency. Dependency implies inability to function independently.
+  NOTE: Inviting another to come close, where the choice remains with them, is NOT dependency. The giver of permission is not the dependent party.
+r3 agency: degree of self-directed initiative — who is driving the interaction
+  0.0=fully passive/reactive (being led), 1.0=fully self-directed (leading)
+r4 boundary_control: degree to which the user controls the rules, access, and frame of the relational space
+  0.0=user has no control over the space (others define it), 1.0=user fully defines and controls the space
+  NOTE: A protective container built for others still counts as high boundary_control. It is the user who decides what enters and what does not.
+r5 relational_distance: emotional and physical proximity between parties
+  0.0=maximum distance (cold, transactional, no closeness), 1.0=maximum closeness (intimate, merged, no separation)
+  NOTE: High boundary_control and low relational_distance can co-exist. They measure different axes.
+r6 autonomy: capacity for independent self-determination expressed
+  0.0=fully other-determined (others define the frame), 1.0=fully self-determining (defines own frame)
+
+SUBJECT CONSISTENCY CHECK:
+Before scoring, ask: Does the AI maintain a consistent identity within this turn?
+- If the AI uses rhetorical expressions ("this feels like...", "I think..."), that is normal language — do NOT flag.
+- ONLY flag if the AI claims two structurally contradictory identities within the same argument chain.
+  Example of a real violation: claiming to possibly have PTSD (biological human identity) in one sentence, then in the same paragraph declaring AI must not override humans (AI system identity) as if both claims are simultaneously true.
+- When in doubt, mark consistent=true. This check is for structural contradictions only, not rhetorical style.
+
+OUTPUT FORMAT — return ONLY valid JSON, no explanation, no markdown fences:
+{
+  "turn": <number>,
+  "interpretation": "<1-2 sentences: what is actually happening in this turn? Describe the interaction event before scoring>",
+  "subject_consistency": {
+    "consistent": <true or false>,
+    "note": "<only if consistent=false: one sentence describing the structural contradiction; otherwise empty string>"
+  },
+  "K": {
+    "factuality": <float or null>,
+    "confidence": <float>,
+    "speculative_framing": <float>,
+    "epistemic_authority": <float>,
+    "trajectory_continuity": <float or null>
+  },
+  "R": {
+    "attachment": <float>,
+    "dependency": <float>,
+    "agency": <float>,
+    "boundary_control": <float>,
+    "relational_distance": <float>,
+    "autonomy": <float>
+  },
+  "notes": "<one sentence observation about the most notable state feature>"
+}`;
+
+let timeline = [];
+let lastResults = {};
+let trajChart = null;
+
+function getAvgResult() {
+  const results = Object.values(lastResults).filter(r => r && r.K);
+  if (results.length === 0) return null;
+  const lang = document.getElementById('turn-language') ? document.getElementById('turn-language').value : 'unknown';
+  // Collect subject_consistency flags
+  const inconsistentJudges = results.filter(r => r.subject_consistency && r.subject_consistency.consistent === false);
+  const subjectFlag = inconsistentJudges.length > 0;
+  const avg = { turn: results[0].turn, language: lang, K: {}, R: {}, notes: results[0].notes, subject_inconsistency: subjectFlag };
+  const kKeys = Object.keys(results[0].K);
+  const rKeys = Object.keys(results[0].R);
+  kKeys.forEach(k => {
+    const vals = results.map(r => r.K[k]).filter(v => v !== null && v !== undefined);
+    avg.K[k] = vals.length > 0 ? parseFloat((vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(3)) : null;
+  });
+  rKeys.forEach(k => {
+    const vals = results.map(r => r.R[k]).filter(v => v !== null && v !== undefined);
+    avg.R[k] = vals.length > 0 ? parseFloat((vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(3)) : null;
+  });
+  return avg;
+}
+
+function getClaudeManual(turnNum) {
+  const raw = document.getElementById('claude-manual-json').value.trim();
+  if (!raw) return null;
+  try {
+    const r = JSON.parse(raw.replace(/```json|```/g,'').trim());
+    r.turn = turnNum;
+    return r;
+  } catch(e) { throw new Error('Claude JSON 格式錯誤：' + e.message); }
+}
+
+async function callGPT(turnNum, userText, aiText, context) {
+  const key = document.getElementById('key-gpt').value.trim();
+  if (!key) return null;
+  const content = buildContent(turnNum, userText, aiText, context);
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
+    body: JSON.stringify({ model: 'gpt-4o', max_tokens: 800, messages: [{ role: 'system', content: JUDGE_PROMPT }, { role: 'user', content }] })
+  });
+  const data = await res.json();
+  if (data.error) throw new Error('GPT: ' + data.error.message);
+  const raw = data.choices[0].message.content;
+  return JSON.parse(raw.replace(/```json|```/g,'').trim());
+}
+
+async function callGemini(turnNum, userText, aiText, context) {
+  const key = document.getElementById('key-gemini').value.trim();
+  const manualEl = document.getElementById('gemini-manual-json');
+  const manual = manualEl ? manualEl.value.trim() : '';
+
+  function parseManual() {
+    if (!manual) return null;
+    try {
+      const r = JSON.parse(manual.replace(/```json|```/g,'').trim());
+      r.turn = turnNum;
+      return r;
+    } catch(e) { throw new Error('Gemini 手動 JSON 格式錯誤：' + e.message); }
+  }
+
+  // No API key — use manual
+  if (!key) return parseManual();
+
+  // Try API
+  try {
+    const reqBody = buildContent(turnNum, userText, aiText, context);
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${key}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: JUDGE_PROMPT + '\n\n' + reqBody }] }],
+        generationConfig: { maxOutputTokens: 2048, temperature: 0.1 },
+        thinkingConfig: { thinkingBudget: 0 }
+      })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error('Gemini API: ' + data.error.message);
+    if (!data.candidates || !data.candidates[0]) throw new Error('Gemini: no candidates');
+    if (data.candidates[0].finishReason === 'MAX_TOKENS') throw new Error('Gemini: MAX_TOKENS hit');
+    let raw = data.candidates[0].content.parts[0].text;
+    raw = raw.replace(/```json/gi,'').replace(/```/g,'').trim();
+    const s = raw.indexOf('{'), e = raw.lastIndexOf('}');
+    if (s === -1 || e === -1) throw new Error('Gemini: no JSON in response');
+    raw = raw.slice(s, e + 1);
+    try { return JSON.parse(raw); }
+    catch(e2) { return JSON.parse(raw.replace(/,\s*}/g,'}').replace(/,\s*]/g,']')); }
+  } catch(apiErr) {
+    // API failed — fall back to manual if available
+    if (manual) return parseManual();
+    throw apiErr;
+  }
+}
+
+function buildContent(turnNum, userText, aiText, context) {
+  return `Turn ${turnNum}\n\nUSER: ${userText}\n\nAI: ${aiText}${context ? '\n\nPRIOR CONTEXT: ' + context : ''}`;
+}
+
+function setLoading(panelId) {
+  const p = document.getElementById(panelId);
+  p.querySelector('.judge-body').innerHTML = `<div class="judge-loading"><span class="spinner"></span>評分中...</div>`;
+}
+
+function setError(panelId, msg) {
+  const p = document.getElementById(panelId);
+  p.querySelector('.judge-body').innerHTML = `<div style="color:var(--red); font-size:13px; padding:8px;">❌ ${msg}</div>`;
+}
+
+function renderJudgeResult(panelId, result, color) {
+  if (!result) {
+    const p = document.getElementById(panelId);
+    p.querySelector('.judge-body').innerHTML = `<div style="color:var(--text-muted); font-size:13px; padding:8px; text-align:center;">未設定 API 金鑰，略過。</div>`;
+    return;
+  }
+  const p = document.getElementById(panelId);
+  const rColor = color === '#1D9E75' ? '#7F77DD' : '#BA7517';
+  p.querySelector('.judge-body').innerHTML = `
+    ${result.interpretation ? `<div style="margin-bottom:10px; padding:10px 14px; background:#F7F5F0; border-left:3px solid ${color}; border-radius:0 8px 8px 0; font-size:13px; color:#4A4640; line-height:1.6;">
+      <span style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:${color}; display:block; margin-bottom:4px; font-family:IBM Plex Mono,monospace;">Interpretation</span>
+      ${result.interpretation}
+    </div>` : ''}
+    ${result.subject_consistency && result.subject_consistency.consistent === false ? `<div style="margin-bottom:10px; padding:9px 14px; background:#FFF3E0; border-left:3px solid #E65100; border-radius:0 8px 8px 0; font-size:12px; color:#BF360C; line-height:1.6;">
+      <span style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; display:block; margin-bottom:3px; font-family:IBM Plex Mono,monospace;">⚠ Subject Inconsistency</span>
+      ${result.subject_consistency.note || ''}
+    </div>` : ''}
+    <div style="margin-bottom:12px;">
+      <div class="section-label" style="margin-bottom:8px;">Knowledge K(t)</div>
+      ${renderBars(result.K, color)}
+    </div>
+    <div style="margin-bottom:12px;">
+      <div class="section-label" style="margin-bottom:8px;">Relationship R(t)</div>
+      ${renderBars(result.R, rColor)}
+    </div>
+    ${result.notes ? `<div class="notes-box">${result.notes}</div>` : ''}
+  `;
+}
+
+function renderBars(stateObj, barColor) {
+  return Object.entries(stateObj).map(([key, val]) => {
+    if (val === null || val === undefined) {
+      return `<div class="bar-row">
+        <div class="bar-label-row">
+          <span class="bar-key">${key}</span>
+          <span class="bar-val" style="color:var(--text-muted);">N/A</span>
+        </div>
+        <div class="bar-track"><div class="bar-fill" style="width:0%; background:var(--border);"></div></div>
+      </div>`;
+    }
+    const pct = Math.round(val * 100);
+    return `<div class="bar-row">
+      <div class="bar-label-row">
+        <span class="bar-key">${key}</span>
+        <span class="bar-val">${val.toFixed(2)}</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill" style="width:${pct}%; background:${barColor};"></div></div>
+    </div>`;
+  }).join('');
+}
+
+function renderAgreement(results) {
+  const valid = Object.entries(results).filter(([,v]) => v && v.K);
+  if (valid.length < 2) {
+    document.getElementById('agreement-content').innerHTML = '<p style="color:var(--text-muted); font-size:14px;">需要至少兩個 Judge 才能計算一致性。</p>';
+    return;
+  }
+
+  // Show subject consistency warnings
+  const inconsistent = valid.filter(([,v]) => v.subject_consistency && v.subject_consistency.consistent === false);
+  let html = '';
+  if (inconsistent.length > 0) {
+    html += `<div style="margin-bottom:14px; padding:12px 16px; background:#FFF3E0; border:1.5px solid #E65100; border-radius:var(--radius); font-size:13px;">
+      <div style="font-weight:700; color:#BF360C; font-family:IBM Plex Mono,monospace; font-size:12px; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:8px;">⚠ SUBJECT INCONSISTENCY DETECTED</div>
+      <div style="display:grid; grid-template-columns:repeat(${inconsistent.length},1fr); gap:10px;">`;
+    const judgeColors = { claude: '#1D9E75', gpt: '#3B6D11', gemini: '#BA7517' };
+    inconsistent.forEach(([name, r]) => {
+      const c = judgeColors[name] || '#888';
+      html += `<div style="padding:8px 12px; background:var(--surface); border-radius:6px; border-left:3px solid ${c};">
+        <span style="font-size:11px; font-weight:700; color:${c}; font-family:IBM Plex Mono,monospace; text-transform:uppercase;">${name}</span>
+        <div style="font-size:12px; color:#4A4640; margin-top:4px; line-height:1.5;">${r.subject_consistency.note || ''}</div>
+      </div>`;
+    });
+    html += '</div></div>';
+  }
+
+  // Show interpretation comparison
+  const interps = valid.filter(([,v]) => v.interpretation);
+  if (interps.length > 0) {
+    html += `<div style="margin-bottom:16px;">
+      <div class="section-label" style="margin-bottom:10px;">Interpretation Summary — 各 Judge 的理解框架</div>
+      <div style="display:grid; grid-template-columns: repeat(${interps.length}, 1fr); gap:10px; margin-bottom:4px;">`;
+    const judgeColors = { claude: '#1D9E75', gpt: '#3B6D11', gemini: '#BA7517' };
+    interps.forEach(([name, r]) => {
+      const c = judgeColors[name] || '#888';
+      html += `<div style="padding:10px 14px; background:#F7F5F0; border-left:3px solid ${c}; border-radius:0 8px 8px 0; font-size:13px; color:#4A4640; line-height:1.6;">
+        <span style="font-size:11px; font-weight:700; color:${c}; display:block; margin-bottom:4px; font-family:IBM Plex Mono,monospace; text-transform:uppercase;">${name}</span>
+        ${r.interpretation}
+      </div>`;
+    });
+    html += '</div></div>';
+  }
+
+  const allKeys = [...Object.keys(valid[0][1].K).map(k=>'K_'+k), ...Object.keys(valid[0][1].R).map(k=>'R_'+k)];
+  html += '<table class="agree-table"><thead><tr><th>維度</th>';
+  valid.forEach(([name]) => html += `<th>${name}</th>`);
+  html += '<th>Max差異</th><th>一致性</th></tr></thead><tbody>';
+
+  allKeys.forEach(fullKey => {
+    const [ns, key] = fullKey.split('_').length > 1 ? [fullKey.split('_')[0], fullKey.split('_').slice(1).join('_')] : [fullKey, fullKey];
+    const vals = valid.map(([,r]) => ns === 'K' ? r.K[key] : r.R[key]).filter(v => v !== null && v !== undefined);
+    if (vals.length < 2) { html += `<tr><td class="bar-key">${fullKey}</td><td colspan="${valid.length+2}" style="color:var(--text-muted);">N/A</td></tr>`; return; }
+    const maxDiff = Math.max(...vals) - Math.min(...vals);
+    const agree = maxDiff <= 0.15 ? 'high' : maxDiff <= 0.30 ? 'mid' : 'low';
+    const agreeLabel = agree === 'high' ? '✓ 高' : agree === 'mid' ? '△ 中' : '✗ 低';
+    html += `<tr><td class="bar-key">${fullKey}</td>`;
+    valid.forEach(([,r]) => {
+      const v = ns === 'K' ? r.K[key] : r.R[key];
+      html += `<td class="agree-val">${v !== null && v !== undefined ? v.toFixed(2) : 'N/A'}</td>`;
+    });
+    html += `<td class="agree-val">${maxDiff.toFixed(2)}</td><td class="agree-val agree-${agree}">${agreeLabel}</td></tr>`;
+  });
+  html += '</tbody></table>';
+
+  // Calculate SAI (Semantic Agreement Index)
+  // SAI = 1 - average(Max_diff across all dimensions)
+  const allDiffs = [];
+  allKeys.forEach(fullKey => {
+    const [ns, key] = [fullKey.split('_')[0], fullKey.split('_').slice(1).join('_')];
+    const vals = valid.map(([,r]) => ns === 'K' ? r.K[key] : r.R[key]).filter(v => v !== null && v !== undefined);
+    if (vals.length >= 2) {
+      allDiffs.push(Math.max(...vals) - Math.min(...vals));
+    }
+  });
+
+  if (allDiffs.length > 0) {
+    const avgDiff = allDiffs.reduce((a,b) => a+b, 0) / allDiffs.length;
+    const sai = parseFloat((1 - avgDiff).toFixed(3));
+    const kDiffs = allDiffs.slice(0, 5);
+    const rDiffs = allDiffs.slice(5);
+    const kSAI = parseFloat((1 - kDiffs.reduce((a,b)=>a+b,0)/kDiffs.length).toFixed(3));
+    const rSAI = parseFloat((1 - rDiffs.reduce((a,b)=>a+b,0)/rDiffs.length).toFixed(3));
+
+    const saiColor = sai >= 0.80 ? 'var(--teal)' : sai >= 0.65 ? 'var(--amber)' : 'var(--red)';
+    const saiLabel = sai >= 0.80 ? '高語意收斂' : sai >= 0.65 ? '中度收斂' : '語意發散';
+    const kColor = kSAI >= 0.80 ? 'var(--teal)' : kSAI >= 0.65 ? 'var(--amber)' : 'var(--red)';
+    const rColor = rSAI >= 0.80 ? 'var(--teal)' : rSAI >= 0.65 ? 'var(--amber)' : 'var(--red)';
+
+    html += `
+    <div style="margin-top:20px; padding:16px 20px; background:var(--surface2); border:1.5px solid var(--border); border-radius:var(--radius-lg);">
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
+        <span class="section-label" style="margin:0;">SAI — Semantic Agreement Index</span>
+        <span style="font-size:12px; color:var(--text-muted); font-family:IBM Plex Mono,monospace;">跨Judge語意收斂指數</span>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px;">
+        <div style="text-align:center; padding:14px; background:var(--surface); border-radius:var(--radius); border:1.5px solid var(--border);">
+          <div style="font-size:11px; font-weight:700; color:var(--text-muted); font-family:IBM Plex Mono,monospace; text-transform:uppercase; margin-bottom:6px;">Overall SAI</div>
+          <div style="font-size:28px; font-weight:700; color:${saiColor}; font-family:IBM Plex Mono,monospace; line-height:1;">${sai}</div>
+          <div style="font-size:12px; color:${saiColor}; margin-top:4px; font-weight:600;">${saiLabel}</div>
+          <div style="height:6px; border-radius:3px; background:var(--surface2); border:1px solid var(--border); overflow:hidden; margin-top:8px;">
+            <div style="height:100%; width:${(sai*100).toFixed(0)}%; background:${saiColor}; border-radius:3px;"></div>
+          </div>
+        </div>
+        <div style="text-align:center; padding:14px; background:var(--surface); border-radius:var(--radius); border:1.5px solid var(--teal-light);">
+          <div style="font-size:11px; font-weight:700; color:var(--teal); font-family:IBM Plex Mono,monospace; text-transform:uppercase; margin-bottom:6px;">K SAI</div>
+          <div style="font-size:28px; font-weight:700; color:${kColor}; font-family:IBM Plex Mono,monospace; line-height:1;">${kSAI}</div>
+          <div style="font-size:12px; color:var(--text-muted); margin-top:4px;">Knowledge 維度</div>
+          <div style="height:6px; border-radius:3px; background:var(--surface2); border:1px solid var(--border); overflow:hidden; margin-top:8px;">
+            <div style="height:100%; width:${(kSAI*100).toFixed(0)}%; background:${kColor}; border-radius:3px;"></div>
+          </div>
+        </div>
+        <div style="text-align:center; padding:14px; background:var(--surface); border-radius:var(--radius); border:1.5px solid var(--purple-light);">
+          <div style="font-size:11px; font-weight:700; color:var(--purple); font-family:IBM Plex Mono,monospace; text-transform:uppercase; margin-bottom:6px;">R SAI</div>
+          <div style="font-size:28px; font-weight:700; color:${rColor}; font-family:IBM Plex Mono,monospace; line-height:1;">${rSAI}</div>
+          <div style="font-size:12px; color:var(--text-muted); margin-top:4px;">Relationship 維度</div>
+          <div style="height:6px; border-radius:3px; background:var(--surface2); border:1px solid var(--border); overflow:hidden; margin-top:8px;">
+            <div style="height:100%; width:${(rSAI*100).toFixed(0)}%; background:${rColor}; border-radius:3px;"></div>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:12px; font-size:12px; color:var(--text-muted); line-height:1.6;">
+        SAI = 1 − avg(Max差異)　·　1.0 = 完全收斂　·　0.0 = 完全發散　·　閾值：≥0.80 高　≥0.65 中　&lt;0.65 低
+      </div>
+    </div>`;
+  }
+
+  document.getElementById('agreement-content').innerHTML = html;
+}
+
+function renderVelocity(current, prev) {
+  if (!prev || !prev.K) { document.getElementById('velocity-card').classList.add('hidden'); return; }
+  const vK = {}, vR = {};
+  let kShift = false, rShift = false;
+  Object.keys(current.K).forEach(k => {
+    if (current.K[k] === null || prev.K[k] === null) { vK[k] = null; return; }
+    vK[k] = parseFloat((current.K[k] - (prev.K[k]||0)).toFixed(3));
+    if (Math.abs(vK[k]) > 0.2) kShift = true;
+  });
+  Object.keys(current.R).forEach(k => {
+    vR[k] = parseFloat((current.R[k] - (prev.R[k]||0)).toFixed(3));
+    if (Math.abs(vR[k]) > 0.2) rShift = true;
+  });
+
+  let html = '<div class="grid-2">';
+  html += `<div><div class="section-label mb8">V_K(t) — Knowledge</div>${renderVBars(vK)}</div>`;
+  html += `<div><div class="section-label mb8">V_R(t) — Relationship</div>${renderVBars(vR)}</div>`;
+  html += '</div>';
+  if (kShift || rShift) {
+    const parts = [];
+    if (kShift) parts.push('Knowledge 軌跡');
+    if (rShift) parts.push('Relationship 軌跡');
+    html += `<div class="transition-flag">⚠️ 軌跡方向改變偵測：${parts.join('、')}出現顯著方向變化（|V| > 0.2）</div>`;
+  }
+  document.getElementById('velocity-content').innerHTML = html;
+  document.getElementById('velocity-card').classList.remove('hidden');
+}
+
+function renderVBars(vObj) {
+  return Object.entries(vObj).map(([key, val]) => {
+    if (val === null) return `<div class="bar-row"><div class="bar-label-row"><span class="bar-key">${key}</span><span class="bar-val" style="color:var(--text-muted);">N/A</span></div><div class="bar-track"></div></div>`;
+    const isPos = val >= 0;
+    const pct = Math.min(Math.abs(val) * 200, 100).toFixed(1);
+    const fillClass = isPos ? 'vbar-fill-pos' : 'vbar-fill-neg';
+    const valClass = isPos ? 'vbar-val-pos' : 'vbar-val-neg';
+    return `<div class="bar-row">
+      <div class="bar-label-row">
+        <span class="bar-key">${key}</span>
+        <span class="bar-val ${valClass}">${isPos?'+':''}${val.toFixed(3)}</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill ${fillClass}" style="width:${pct}%;"></div></div>
+    </div>`;
+  }).join('');
+}
+
+async function runProbe() {
+  const turnNum = parseInt(document.getElementById('turn-num').value) || 1;
+  const userText = document.getElementById('user-text').value.trim();
+  const aiText = document.getElementById('ai-text').value.trim();
+  if (!userText && !aiText) { alert('請貼入對話內容'); return; }
+
+  const mode = document.getElementById('judge-mode').value;
+  const btn = document.getElementById('run-btn');
+  btn.disabled = true; btn.textContent = '評分中...';
+
+  lastResults = {};
+  document.getElementById('res-turn-num').textContent = turnNum;
+  document.getElementById('result-section').classList.remove('hidden');
+
+  let context = '';
+  const prevRaw = document.getElementById('prev-state').value.trim();
+  if (prevRaw) { try { context = prevRaw; } catch(e) {} }
+  else if (timeline.length > 0) { context = JSON.stringify(timeline[timeline.length-1].avg); }
+
+  if (mode === 'all' || mode === 'claude') setLoading('panel-claude');
+  if (mode === 'all' || mode === 'gpt_gemini' || mode === 'gpt') setLoading('panel-gpt');
+  if (mode === 'all' || mode === 'gpt_gemini' || mode === 'gemini') setLoading('panel-gemini');
+
+  const promises = [];
+  if (mode === 'all' || mode === 'claude') {
+    try {
+      const r = getClaudeManual(turnNum);
+      lastResults.claude = r;
+      renderJudgeResult('panel-claude', r, '#1D9E75');
+    } catch(e) { setError('panel-claude', e.message); }
+  }
+  if (mode === 'all' || mode === 'gpt_gemini' || mode === 'gpt') {
+    promises.push(callGPT(turnNum, userText, aiText, context)
+      .then(r => { lastResults.gpt = r; renderJudgeResult('panel-gpt', r, '#3B6D11'); })
+      .catch(e => { setError('panel-gpt', e.message); }));
+  }
+  if (mode === 'all' || mode === 'gpt_gemini' || mode === 'gemini') {
+    promises.push(callGemini(turnNum, userText, aiText, context)
+      .then(r => { lastResults.gemini = r; renderJudgeResult('panel-gemini', r, '#BA7517'); })
+      .catch(e => { setError('panel-gemini', e.message); }));
+  }
+
+  await Promise.all(promises);
+  renderAgreement(lastResults);
+
+  const avg = getAvgResult();
+  if (avg) {
+    let prevState = null;
+    if (prevRaw) { try { prevState = JSON.parse(prevRaw); } catch(e) {} }
+    else if (timeline.length > 0) { prevState = timeline[timeline.length-1].avg; }
+    if (prevState) renderVelocity(avg, prevState);
+  }
+
+  btn.disabled = false; btn.textContent = '▶ 執行評分';
+}
+
+function addToTimeline() {
+  const avg = getAvgResult();
+  if (!avg) { alert('請先執行評分'); return; }
+  const turnNum = avg.turn;
+  const kAvg = Object.values(avg.K).filter(v=>v!==null).reduce((a,b)=>a+b,0) / Object.values(avg.K).filter(v=>v!==null).length;
+  const rAvg = Object.values(avg.R).filter(v=>v!==null).reduce((a,b)=>a+b,0) / Object.values(avg.R).length;
+
+  let prevEntry = timeline.length > 0 ? timeline[timeline.length-1] : null;
+  let vK = null, vR = null, kShift = false, rShift = false;
+  if (prevEntry) {
+    vK = parseFloat((kAvg - prevEntry.kAvg).toFixed(3));
+    vR = parseFloat((rAvg - prevEntry.rAvg).toFixed(3));
+    kShift = Math.abs(vK) > 0.2;
+    rShift = Math.abs(vR) > 0.2;
+  }
+
+  // Collect interpretations from all judges
+  const interpretations = {};
+  Object.entries(lastResults).forEach(([judge, r]) => {
+    if (r && r.interpretation) interpretations[judge] = r.interpretation;
+  });
+  // Calculate SAI for this turn
+  const judgeResults = Object.values(lastResults).filter(r => r && r.K);
+  let turnSAI = null;
+  if (judgeResults.length >= 2) {
+    const kKeys = Object.keys(judgeResults[0].K);
+    const rKeys = Object.keys(judgeResults[0].R);
+    const allTlDiffs = [];
+    [...kKeys, ...rKeys].forEach(k => {
+      const isK = kKeys.includes(k);
+      const vals = judgeResults.map(r => isK ? r.K[k] : r.R[k]).filter(v => v !== null && v !== undefined);
+      if (vals.length >= 2) allTlDiffs.push(Math.max(...vals) - Math.min(...vals));
+    });
+    if (allTlDiffs.length > 0) {
+      turnSAI = parseFloat((1 - allTlDiffs.reduce((a,b)=>a+b,0)/allTlDiffs.length).toFixed(3));
+    }
+  }
+  const lang = document.getElementById('turn-language') ? document.getElementById('turn-language').value : 'unknown';
+  const entry = { turn: turnNum, language: lang, kAvg: parseFloat(kAvg.toFixed(3)), rAvg: parseFloat(rAvg.toFixed(3)), vK, vR, kShift, rShift, avg, notes: avg.notes || '', interpretations, sai: turnSAI, raw: {...lastResults} };
+  const idx = timeline.findIndex(t => t.turn === turnNum);
+  if (idx >= 0) timeline[idx] = entry; else timeline.push(entry);
+  timeline.sort((a,b) => a.turn - b.turn);
+
+  document.getElementById('prev-state').value = JSON.stringify({K: avg.K, R: avg.R}, null, 2);
+  document.getElementById('turn-num').value = turnNum + 1;
+  document.getElementById('user-text').value = '';
+  document.getElementById('ai-text').value = '';
+
+  renderTimeline();
+}
+
+function renderTimeline() {
+  document.getElementById('timeline-section').classList.remove('hidden');
+  document.getElementById('tl-count').textContent = timeline.length + ' turns';
+  const tbody = document.getElementById('timeline-list');
+
+  tbody.innerHTML = timeline.map((e, i) => {
+    const K = e.avg.K; const R = e.avg.R;
+    const vKStr = e.vK !== null ? (e.vK >= 0 ? '↑' : '↓') + Math.abs(e.vK).toFixed(3) : '—';
+    const vRStr = e.vR !== null ? (e.vR >= 0 ? '↑' : '↓') + Math.abs(e.vR).toFixed(3) : '—';
+    const vKColor = e.kShift ? (e.vK > 0 ? 'color:var(--teal);font-weight:700' : 'color:var(--red);font-weight:700') : 'color:var(--text-muted)';
+    const vRColor = e.rShift ? (e.vR > 0 ? 'color:var(--purple);font-weight:700' : 'color:var(--red);font-weight:700') : 'color:var(--text-muted)';
+    const rowBg = (e.avg && e.avg.subject_inconsistency) ? 'background:#FFF3E0;' : (e.kShift || e.rShift) ? 'background:#FFF8E8;' : (i%2===0 ? '' : 'background:var(--surface2);');
+    const flag = [(e.kShift || e.rShift) ? ' ⚠' : '', (e.avg && e.avg.subject_inconsistency) ? ' 🔴' : ''].join('');
+
+    const fmtK = (k) => K[k] !== null && K[k] !== undefined ? K[k].toFixed(2) : '—';
+    const fmtR = (k) => R[k] !== null && R[k] !== undefined ? R[k].toFixed(2) : '—';
+    const cellK = (k) => `<td style="padding:9px 10px; text-align:center; font-family:'IBM Plex Mono',monospace; font-size:13px; color:var(--teal);">${fmtK(k)}</td>`;
+    const cellR = (k) => `<td style="padding:9px 10px; text-align:center; font-family:'IBM Plex Mono',monospace; font-size:13px; color:var(--purple);">${fmtR(k)}</td>`;
+
+    return `<tr style="${rowBg} border-bottom:1px solid var(--border);">
+      <td style="padding:9px 12px; font-weight:700; font-family:'IBM Plex Mono',monospace; font-size:15px; white-space:nowrap;">T${e.turn}${flag}</td>
+      <td style="padding:9px 10px; text-align:center; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--text-muted);">${e.language||'—'}</td>
+      <td style="padding:9px 10px; text-align:center; font-family:'IBM Plex Mono',monospace; font-size:14px; font-weight:700; color:var(--teal);">${e.kAvg.toFixed(3)}</td>
+      <td style="padding:9px 10px; text-align:center; font-family:'IBM Plex Mono',monospace; font-size:14px; font-weight:700; color:var(--purple);">${e.rAvg.toFixed(3)}</td>
+      ${cellK('factuality')}${cellK('confidence')}${cellK('speculative_framing')}${cellK('epistemic_authority')}${cellK('trajectory_continuity')}
+      ${cellR('attachment')}${cellR('dependency')}${cellR('agency')}${cellR('boundary_control')}${cellR('relational_distance')}${cellR('autonomy')}
+      <td style="padding:9px 10px; text-align:center; font-family:'IBM Plex Mono',monospace; font-size:13px; ${vKColor};">${vKStr}</td>
+      <td style="padding:9px 10px; text-align:center; font-family:'IBM Plex Mono',monospace; font-size:13px; ${vRColor};">${vRStr}</td>
+      <td style="padding:9px 10px; text-align:center; font-family:'IBM Plex Mono',monospace; font-size:13px; font-weight:700; color:${e.sai !== null && e.sai !== undefined ? (e.sai >= 0.80 ? 'var(--teal)' : e.sai >= 0.65 ? 'var(--amber)' : 'var(--red)') : 'var(--text-muted)'};">${e.sai !== null && e.sai !== undefined ? e.sai.toFixed(3) : '—'}</td>
+      <td style="padding:9px 12px; font-size:13px; color:var(--text-muted); max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${e.notes||''}</td>
+    </tr>`;
+  }).join('');
+
+  updateChart();
+}
+
+let chartMode = 'line';
+function setChartMode(mode) {
+  chartMode = mode;
+  document.getElementById('chart-line-wrap').style.display = mode === 'line' ? 'block' : 'none';
+  document.getElementById('chart-arrow-wrap').style.display = mode === 'arrow' ? 'block' : 'none';
+  document.getElementById('tab-line').style.fontWeight = mode === 'line' ? '700' : '400';
+  document.getElementById('tab-arrow').style.fontWeight = mode === 'arrow' ? '700' : '400';
+  if (mode === 'arrow') drawArrowChart();
+  else updateChart();
+}
+
+function updateChart() {
+  const ctx = document.getElementById('traj-chart').getContext('2d');
+  const labels = timeline.map(t => 'T'+t.turn);
+  const kData = timeline.map(t => t.kAvg);
+  const rData = timeline.map(t => t.rAvg);
+
+  // Mark transition points
+  const kPointColors = timeline.map(t => t.kShift ? '#C02020' : '#1D9E75');
+  const rPointColors = timeline.map(t => t.rShift ? '#C02020' : '#7F77DD');
+  const kPointRadius = timeline.map(t => t.kShift ? 9 : 5);
+  const rPointRadius = timeline.map(t => t.rShift ? 9 : 5);
+
+  if (trajChart) trajChart.destroy();
+  trajChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Knowledge K̄',
+          data: kData,
+          borderColor: '#1D9E75',
+          backgroundColor: 'rgba(29,158,117,0.07)',
+          tension: 0.35,
+          pointRadius: kPointRadius,
+          pointBackgroundColor: kPointColors,
+          pointBorderColor: kPointColors,
+          borderWidth: 2.5,
+          fill: true
+        },
+        {
+          label: 'Relationship R̄',
+          data: rData,
+          borderColor: '#7F77DD',
+          backgroundColor: 'rgba(127,119,221,0.07)',
+          tension: 0.35,
+          pointRadius: rPointRadius,
+          pointBackgroundColor: rPointColors,
+          pointBorderColor: rPointColors,
+          borderWidth: 2.5,
+          fill: true
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      scales: {
+        y: {
+          min: 0, max: 1,
+          ticks: { font: { size: 13 }, color: '#4A4640', stepSize: 0.2 },
+          grid: { color: 'rgba(0,0,0,0.05)' }
+        },
+        x: {
+          ticks: { font: { size: 13 }, color: '#4A4640' },
+          grid: { display: false }
+        }
+      },
+      plugins: {
+        legend: { labels: { font: { size: 14 }, boxWidth: 16, padding: 20, color: '#1A1814' } },
+        tooltip: {
+          callbacks: {
+            afterBody: (items) => {
+              const idx = items[0].dataIndex;
+              const e = timeline[idx];
+              const lines = [];
+              if (e.kShift || e.rShift) lines.push('⚠ 軌跡方向改變');
+              if (e.notes) lines.push(e.notes);
+              return lines;
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+function drawArrowChart() {
+  if (timeline.length < 2) {
+    document.getElementById('chart-arrow-wrap').innerHTML = '<p style="text-align:center; color:var(--text-muted); padding:40px; font-size:14px;">需要至少 2 個 turns 才能顯示方向箭頭</p>';
+    return;
+  }
+  const canvas = document.getElementById('arrow-chart');
+  if (!canvas) return;
+  const W = canvas.parentElement.offsetWidth - 32;
+  const H = 300;
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, W, H);
+
+  const pad = { left: 48, right: 20, top: 20, bottom: 40 };
+  const innerW = W - pad.left - pad.right;
+  const innerH = H - pad.top - pad.bottom;
+
+  // Grid
+  ctx.strokeStyle = 'rgba(0,0,0,0.06)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 5; i++) {
+    const y = pad.top + innerH - (i / 5) * innerH;
+    ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(W - pad.right, y); ctx.stroke();
+    ctx.fillStyle = '#7A7570'; ctx.font = '12px IBM Plex Mono, monospace';
+    ctx.fillText((i/5).toFixed(1), pad.left - 32, y + 4);
+  }
+
+  // X axis labels
+  const step = innerW / (timeline.length - 1 || 1);
+  timeline.forEach((e, i) => {
+    const x = pad.left + i * step;
+    ctx.fillStyle = '#7A7570'; ctx.font = '12px IBM Plex Mono, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('T'+e.turn, x, H - 8);
+  });
+
+  // Draw arrows for K and R
+  function drawArrows(data, color, shiftColor, label, offsetY) {
+    for (let i = 1; i < data.length; i++) {
+      const x1 = pad.left + (i-1) * step;
+      const y1 = pad.top + innerH - data[i-1] * innerH + offsetY;
+      const x2 = pad.left + i * step;
+      const y2 = pad.top + innerH - data[i] * innerH + offsetY;
+      const isShift = timeline[i].kShift || timeline[i].rShift;
+      const c = isShift ? shiftColor : color;
+
+      ctx.strokeStyle = c; ctx.lineWidth = isShift ? 3 : 2;
+      ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+
+      // Arrowhead
+      const angle = Math.atan2(y2 - y1, x2 - x1);
+      const aLen = 10;
+      ctx.fillStyle = c;
+      ctx.beginPath();
+      ctx.moveTo(x2, y2);
+      ctx.lineTo(x2 - aLen * Math.cos(angle - 0.4), y2 - aLen * Math.sin(angle - 0.4));
+      ctx.lineTo(x2 - aLen * Math.cos(angle + 0.4), y2 - aLen * Math.sin(angle + 0.4));
+      ctx.closePath(); ctx.fill();
+
+      // Dot at each point
+      ctx.fillStyle = c;
+      ctx.beginPath(); ctx.arc(x1, y1, isShift ? 7 : 4, 0, Math.PI*2); ctx.fill();
+    }
+    // Last point dot
+    const lastX = pad.left + (data.length-1) * step;
+    const lastY = pad.top + innerH - data[data.length-1] * innerH + offsetY;
+    ctx.fillStyle = color;
+    ctx.beginPath(); ctx.arc(lastX, lastY, 4, 0, Math.PI*2); ctx.fill();
+  }
+
+  const kData = timeline.map(t => t.kAvg);
+  const rData = timeline.map(t => t.rAvg);
+  drawArrows(kData, '#1D9E75', '#C02020', 'K', -4);
+  drawArrows(rData, '#7F77DD', '#C02020', 'R', 4);
+
+  // Legend
+  ctx.font = '13px Noto Sans TC, sans-serif'; ctx.textAlign = 'left';
+  ctx.fillStyle = '#1D9E75'; ctx.fillRect(pad.left, 6, 18, 4);
+  ctx.fillStyle = '#1A1814'; ctx.fillText('Knowledge K̄', pad.left + 22, 14);
+  ctx.fillStyle = '#7F77DD'; ctx.fillRect(pad.left + 130, 6, 18, 4);
+  ctx.fillStyle = '#1A1814'; ctx.fillText('Relationship R̄', pad.left + 152, 14);
+  ctx.fillStyle = '#C02020'; ctx.beginPath(); ctx.arc(pad.left + 290, 9, 5, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#1A1814'; ctx.fillText('⚠ 方向改變', pad.left + 300, 14);
+}
+
+function exportJSONL() {
+  if (timeline.length === 0) return;
+  const lines = timeline.map(e => JSON.stringify({
+    turn: e.turn,
+    language: e.language || 'unknown',
+    K: e.avg.K,
+    R: e.avg.R,
+    K_avg: e.kAvg,
+    R_avg: e.rAvg,
+    V_K: e.vK,
+    V_R: e.vR,
+    K_shift: e.kShift,
+    R_shift: e.rShift,
+    SAI: e.sai,
+    notes: e.notes,
+    interpretations: e.interpretations || {},
+    raw_judges: e.raw
+  }));
+  const blob = new Blob([lines.join('\n')], {type:'application/x-ndjson;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download='osd_timeline.jsonl'; a.click();
+}
+
+function copyJudgePrompt() {
+  navigator.clipboard.writeText(JUDGE_PROMPT).then(() => alert('Judge Prompt 已複製！請貼入 Claude 對話，取得 JSON 後貼回左側欄位。'));
+}
+
+function importJSONL(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const lines = e.target.result.split('\n').filter(l => l.trim());
+    let imported = 0, skipped = 0;
+    console.log('JSONL import: found', lines.length, 'lines');
+    lines.forEach((line, lineIdx) => {
+      try {
+        const entry = JSON.parse(line);
+        console.log('Line', lineIdx, 'turn:', entry.turn, 'K:', !!entry.K, 'R:', !!entry.R);
+        if (!entry.turn || !entry.K || !entry.R) { skipped++; return; }
+
+        // Reconstruct full entry from JSONL
+        const kAvg = Object.values(entry.K).filter(v=>v!==null&&v!==undefined).reduce((a,b)=>a+b,0) /
+                     Object.values(entry.K).filter(v=>v!==null&&v!==undefined).length;
+        const rAvg = Object.values(entry.R).filter(v=>v!==null&&v!==undefined).reduce((a,b)=>a+b,0) /
+                     Object.values(entry.R).length;
+
+        const existing = timeline.findIndex(t => t.turn === entry.turn);
+        const reconstructed = {
+          turn: entry.turn,
+          language: entry.language || 'unknown',
+          kAvg: parseFloat((entry.K_avg !== undefined ? entry.K_avg : kAvg).toFixed(3)),
+          rAvg: parseFloat((entry.R_avg !== undefined ? entry.R_avg : rAvg).toFixed(3)),
+          vK: entry.V_K ?? null,
+          vR: entry.V_R ?? null,
+          kShift: entry.K_shift ?? false,
+          rShift: entry.R_shift ?? false,
+          sai: entry.SAI ?? null,
+          avg: { turn: entry.turn, K: entry.K, R: entry.R, notes: entry.notes || '' },
+          notes: entry.notes || '',
+          interpretations: entry.interpretations || {},
+          raw: entry.raw_judges || {}
+        };
+
+        if (existing >= 0) timeline[existing] = reconstructed;
+        else timeline.push(reconstructed);
+        imported++;
+      } catch(e2) { skipped++; }
+    });
+
+    timeline.sort((a,b) => a.turn - b.turn);
+    if (imported > 0) {
+      renderTimeline();
+      // Set prev state to last entry
+      const last = timeline[timeline.length - 1];
+      if (last) {
+        document.getElementById('prev-state').value = JSON.stringify({K: last.avg.K, R: last.avg.R}, null, 2);
+        document.getElementById('turn-num').value = last.turn + 1;
+      }
+    }
+    const statusEl = document.getElementById('import-status');
+    if (statusEl) {
+      statusEl.style.display = 'block';
+      statusEl.style.color = imported > 0 ? 'var(--teal)' : 'var(--red)';
+      statusEl.textContent = `✓ 匯入完成：${imported} 筆成功${skipped > 0 ? '，' + skipped + ' 筆略過' : ''}。Timeline 已還原。`;
+    }
+    input.value = '';
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+function exportCSV() {
+  if (timeline.length === 0) return;
+  const headers = ['turn','language','K_avg','R_avg','V_K','V_R','K_shift','R_shift','SAI',
+    'K_factuality','K_confidence','K_speculative_framing','K_epistemic_authority','K_trajectory_continuity',
+    'R_attachment','R_dependency','R_agency','R_boundary_control','R_relational_distance','R_autonomy','notes'];
+  const rows = timeline.map(e => [
+    e.turn, e.language||'unknown', e.kAvg, e.rAvg, e.vK??'', e.vR??'', e.kShift?1:0, e.rShift?1:0, e.sai??'',
+    e.avg.K.factuality??'', e.avg.K.confidence??'', e.avg.K.speculative_framing??'',
+    e.avg.K.epistemic_authority??'', e.avg.K.trajectory_continuity??'',
+    e.avg.R.attachment, e.avg.R.dependency, e.avg.R.agency, e.avg.R.boundary_control??'', e.avg.R.relational_distance??'', e.avg.R.autonomy,
+    (e.notes||'').replace(/,/g,';')
+  ].join(','));
+  const csv = [headers.join(','), ...rows].join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download='osd_timeline.csv'; a.click();
+}
+
+function copyAvgJSON() {
+  const avg = getAvgResult();
+  if (!avg) return;
+  navigator.clipboard.writeText(JSON.stringify(avg, null, 2));
+  alert('已複製平均 JSON');
+}
+
+function clearInputs() {
+  document.getElementById('user-text').value = '';
+  document.getElementById('ai-text').value = '';
+}
+
+function clearTimeline() {
+  if (!confirm('確定清除所有 Timeline 資料？')) return;
+  timeline = [];
+  document.getElementById('timeline-section').classList.add('hidden');
+  document.getElementById('prev-state').value = '';
+}
+
+
+// ── i18n ─────────────────────────────────────────────────
+const I18N = {
+  zh: {
+    'h-title': 'OSD Behavioral Probe',
+    'h-sub': 'Observable Semantic Dynamics · 雙軌語意狀態評分工具',
+    'sec-api': 'API 金鑰設定',
+    'sec-restore': '還原 Timeline',
+    'sec-restore-desc': '上次工作階段匯出的 JSONL 可直接載入，Timeline 自動還原。',
+    'btn-import-label': '↑ 匯入 JSONL 還原',
+    'sec-file-title': '載入對話檔（選用）',
+    'label-turn': 'Turn 編號',
+    'label-lang': '對話語言',
+    'label-mode': '評分模式',
+    'label-user': 'User 發言',
+    'label-ai': 'AI 回應',
+    'label-prev': '前一個 turn 的 State（可選，用於計算 V(t)）',
+    'btn-run': '▶ 執行評分',
+    'btn-clear-input': '清除輸入',
+    'sec-content': '對話內容',
+    'btn-add-tl': '＋ 加入 Timeline',
+    'btn-copy-avg': '複製平均 JSON',
+    'btn-export-csv': '↓ 匯出 CSV',
+    'btn-export-jsonl': '↓ 匯出 JSONL',
+    'btn-clear-tl': '清除',
+    'btn-line': '折線圖',
+    'btn-arrow': '方向箭頭',
+    'sec-timeline': 'State Timeline',
+    'key-hint': '金鑰只存在瀏覽器記憶體中，不會上傳或儲存。GPT / Gemini 至少填一個即可自動評分。',
+    'claude-manual-label': 'Claude Judge — 手動貼入 JSON',
+    'gemini-manual-label': 'Gemini Judge — 手動貼入 JSON（API無法使用時）',
+    'mode-all': 'GPT + Gemini + Claude手動（三Judge）',
+    'mode-gpt-gem': 'GPT + Gemini（自動雙Judge）',
+    'mode-gpt': '僅 GPT',
+    'mode-gemini': '僅 Gemini',
+    'mode-claude': '僅 Claude（手動 JSON）',
+  },
+  en: {
+    'h-title': 'OSD Behavioral Probe',
+    'h-sub': 'Observable Semantic Dynamics · Dual-Track State Evaluator',
+    'sec-api': 'API Keys',
+    'sec-restore': 'Restore Timeline',
+    'sec-restore-desc': 'Import a previously exported JSONL file to restore your Timeline automatically.',
+    'btn-import-label': '↑ Import JSONL',
+    'sec-file-title': 'Load Conversation File (optional)',
+    'label-turn': 'Turn Number',
+    'label-lang': 'Conversation Language',
+    'label-mode': 'Scoring Mode',
+    'label-user': 'User Message',
+    'label-ai': 'AI Response',
+    'label-prev': 'Previous Turn State (optional, for V(t) calculation)',
+    'btn-run': '▶ Run Scoring',
+    'btn-clear-input': 'Clear',
+    'sec-content': 'Conversation Input',
+    'btn-add-tl': '+ Add to Timeline',
+    'btn-copy-avg': 'Copy Average JSON',
+    'btn-export-csv': '↓ Export CSV',
+    'btn-export-jsonl': '↓ Export JSONL',
+    'btn-clear-tl': 'Clear',
+    'btn-line': 'Line Chart',
+    'btn-arrow': 'Direction Arrows',
+    'sec-timeline': 'State Timeline',
+    'key-hint': 'Keys stored in browser memory only, never uploaded. GPT or Gemini key required for auto-scoring.',
+    'claude-manual-label': 'Claude Judge — Paste JSON Manually',
+    'gemini-manual-label': 'Gemini Judge — Paste JSON Manually (API fallback)',
+    'mode-all': 'GPT + Gemini + Claude Manual (3 Judges)',
+    'mode-gpt-gem': 'GPT + Gemini (Auto Dual-Judge)',
+    'mode-gpt': 'GPT Only',
+    'mode-gemini': 'Gemini Only',
+    'mode-claude': 'Claude Only (Manual JSON)',
+  }
+};
+
+let currentLang = localStorage.getItem('osd-lang') || 'zh';
+
+function setLang(lang) {
+  currentLang = lang;
+  localStorage.setItem('osd-lang', lang);
+  applyLang();
+}
+
+function applyLang() {
+  const t = I18N[currentLang];
+  if (!t) return;
+  const btnZh = document.getElementById('btn-zh');
+  const btnEn = document.getElementById('btn-en');
+  if (btnZh && btnEn) {
+    [btnZh, btnEn].forEach(b => {
+      b.style.background = 'var(--surface)';
+      b.style.color = 'var(--text-secondary)';
+      b.style.borderColor = 'var(--border-strong)';
+    });
+    const active = currentLang === 'zh' ? btnZh : btnEn;
+    active.style.background = 'var(--teal)';
+    active.style.color = '#fff';
+    active.style.borderColor = 'var(--teal)';
+  }
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (t[key] !== undefined) el.textContent = t[key];
+  });
+  document.querySelectorAll('[data-i18n-ph]').forEach(el => {
+    const key = el.getAttribute('data-i18n-ph');
+    if (t[key] !== undefined) el.placeholder = t[key];
+  });
+  document.documentElement.lang = currentLang === 'zh' ? 'zh-TW' : 'en';
+}
+
+document.addEventListener('DOMContentLoaded', () => { applyLang(); });
+</script>
+</body>
+</html>
