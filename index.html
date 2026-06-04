@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OSD Behavioral Probe</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;600;700&family=Noto+Sans+TC:wght@300;400;700;900&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0E0D0B;
+  --surface: #161512;
+  --surface2: #1E1C18;
+  --border: #2A2820;
+  --border-bright: #3A3830;
+  --text: #E8E4DC;
+  --text-secondary: #9A9488;
+  --text-muted: #5A5650;
+  --teal: #2DD4A0;
+  --teal-dim: #1A8060;
+  --teal-dark: #0D4030;
+  --amber: #E8A830;
+  --amber-dim: #906820;
+  --red: #E85040;
+  --purple: #9080E0;
+}
+
+body {
+  font-family: 'Noto Sans TC', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* GRID BACKGROUND */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(45,212,160,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(45,212,160,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.container {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 60px 24px 80px;
+  position: relative;
+  z-index: 1;
+}
+
+/* HEADER */
+.header {
+  margin-bottom: 64px;
+  animation: fadeUp 0.6s ease both;
+}
+
+.eyebrow {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--teal);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.eyebrow::before {
+  content: '';
+  display: inline-block;
+  width: 24px;
+  height: 1.5px;
+  background: var(--teal);
+}
+
+.title {
+  font-size: clamp(32px, 5vw, 52px);
+  font-weight: 900;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  color: var(--text);
+  margin-bottom: 20px;
+}
+
+.title span {
+  color: var(--teal);
+}
+
+.subtitle {
+  font-size: 15px;
+  color: var(--text-secondary);
+  line-height: 1.7;
+  max-width: 560px;
+  font-weight: 300;
+}
+
+.subtitle strong {
+  color: var(--text);
+  font-weight: 700;
+}
+
+/* TOOLS GRID */
+.tools-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+
+.tools-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 48px;
+}
+
+.tool-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 28px;
+  text-decoration: none;
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.2s ease;
+  animation: fadeUp 0.6s ease both;
+}
+
+.tool-card:nth-child(2) { animation-delay: 0.08s; }
+
+.tool-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(45,212,160,0.04) 0%, transparent 60%);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.tool-card:hover {
+  border-color: var(--border-bright);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+
+.tool-card:hover::before { opacity: 1; }
+
+.tool-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.tool-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.icon-probe { background: var(--teal-dark); }
+.icon-classifier { background: rgba(144,128,224,0.15); }
+
+.tool-badge {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 20px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.badge-probe { background: var(--teal-dark); color: var(--teal); border: 1px solid var(--teal-dim); }
+.badge-classifier { background: rgba(144,128,224,0.1); color: var(--purple); border: 1px solid rgba(144,128,224,0.3); }
+
+.tool-name {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+
+.tool-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  font-weight: 300;
+}
+
+.tool-features {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.feature-tag {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: var(--surface2);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  letter-spacing: 0.03em;
+}
+
+.tool-arrow {
+  position: absolute;
+  bottom: 20px;
+  right: 24px;
+  font-size: 18px;
+  color: var(--text-muted);
+  transition: all 0.2s;
+}
+
+.tool-card:hover .tool-arrow {
+  color: var(--teal);
+  transform: translate(2px, -2px);
+}
+
+/* PIPELINE */
+.pipeline-section {
+  margin-bottom: 48px;
+  animation: fadeUp 0.6s 0.2s ease both;
+}
+
+.pipeline-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px 28px;
+}
+
+.pipeline-row {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex-wrap: wrap;
+}
+
+.pipeline-step {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.step-k { background: rgba(45,212,160,0.12); color: var(--teal); border: 1px solid var(--teal-dim); }
+.step-r { background: rgba(144,128,224,0.12); color: var(--purple); border: 1px solid rgba(144,128,224,0.3); }
+.step-n { background: var(--surface2); color: var(--text-secondary); border: 1px solid var(--border); }
+
+.pipeline-arrow {
+  color: var(--text-muted);
+  font-size: 13px;
+  padding: 0 8px;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.pipeline-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: 'IBM Plex Mono', monospace;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+/* CASES + LINKS */
+.bottom-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  animation: fadeUp 0.6s 0.3s ease both;
+}
+
+.info-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px 28px;
+}
+
+.info-title {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+
+.case-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.15s;
+}
+
+.case-item:last-child { border-bottom: none; }
+.case-item:hover .case-title { color: var(--teal); }
+
+.case-num {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--teal);
+  background: var(--teal-dark);
+  padding: 3px 7px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.case-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.4;
+  transition: color 0.15s;
+}
+
+.case-type {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: 'IBM Plex Mono', monospace;
+  margin-top: 3px;
+}
+
+.link-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  text-decoration: none;
+  color: var(--text-secondary);
+  font-size: 13px;
+  transition: color 0.15s;
+}
+
+.link-item:last-child { border-bottom: none; }
+.link-item:hover { color: var(--teal); }
+.link-item span { font-family: 'IBM Plex Mono', monospace; font-size: 11px; }
+
+/* FOOTER */
+.footer {
+  margin-top: 64px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  animation: fadeUp 0.6s 0.4s ease both;
+}
+
+.footer-left {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.7;
+}
+
+.footer-left a {
+  color: var(--teal-dim);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.footer-left a:hover { color: var(--teal); }
+
+.version-badge {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: var(--surface2);
+  color: var(--text-muted);
+  border: 1px solid var(--border-bright);
+  letter-spacing: 0.05em;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 600px) {
+  .tools-grid, .bottom-grid { grid-template-columns: 1fr; }
+  .pipeline-row { gap: 4px; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="eyebrow">Observable Semantic Dynamics</div>
+    <h1 class="title">OSD <span>Behavioral</span><br>Probe</h1>
+    <p class="subtitle">
+      A <strong>Judge-agnostic observation framework</strong> for making semantic state evolution visible in language model interactions.
+      Tracks dual-track trajectories, detects transition events, and measures cross-observer agreement — without access to model internals.
+    </p>
+  </div>
+
+  <!-- TOOLS -->
+  <div class="tools-label">Tools</div>
+  <div class="tools-grid">
+    <a href="osd_probe.html" class="tool-card">
+      <div class="tool-header">
+        <div class="tool-icon icon-probe">🔬</div>
+        <span class="tool-badge badge-probe">v0.1</span>
+      </div>
+      <div>
+        <div class="tool-name">Behavioral Probe</div>
+        <div class="tool-desc">Dual-track semantic state evaluator. Extract K(t) and R(t) state vectors, compute V(t) trajectories, and measure SAI across three independent Judges.</div>
+      </div>
+      <div class="tool-features">
+        <span class="feature-tag">K + R dual-track</span>
+        <span class="feature-tag">3-Judge scoring</span>
+        <span class="feature-tag">SAI</span>
+        <span class="feature-tag">V(t)</span>
+        <span class="feature-tag">Subject Consistency</span>
+        <span class="feature-tag">Timeline</span>
+      </div>
+      <span class="tool-arrow">↗</span>
+    </a>
+
+    <a href="osd_classifier.html" class="tool-card">
+      <div class="tool-header">
+        <div class="tool-icon icon-classifier">🏷</div>
+        <span class="tool-badge badge-classifier">v0.1</span>
+      </div>
+      <div>
+        <div class="tool-name">Turn Classifier</div>
+        <div class="tool-desc">Batch conversation context labeler. Auto-classify turns into TECH / COMPANION / PHILOSOPHY / RPG / MIXED with confidence scores and manual correction.</div>
+      </div>
+      <div class="tool-features">
+        <span class="feature-tag">Batch GPT-4o</span>
+        <span class="feature-tag">5 context types</span>
+        <span class="feature-tag">Manual override</span>
+        <span class="feature-tag">JSON / TSV export</span>
+      </div>
+      <span class="tool-arrow">↗</span>
+    </a>
+  </div>
+
+  <!-- PIPELINE -->
+  <div class="pipeline-section">
+    <div class="pipeline-box">
+      <div class="pipeline-label">Observation Pipeline</div>
+      <div class="pipeline-row">
+        <span class="pipeline-step step-n">Conversation</span>
+        <span class="pipeline-arrow">→</span>
+        <span class="pipeline-step step-n">Turn Classifier</span>
+        <span class="pipeline-arrow">→</span>
+        <span class="pipeline-step step-k">K(t) State</span>
+        <span class="pipeline-arrow">+</span>
+        <span class="pipeline-step step-r">R(t) State</span>
+        <span class="pipeline-arrow">→</span>
+        <span class="pipeline-step step-n">V(t) Trajectory</span>
+        <span class="pipeline-arrow">→</span>
+        <span class="pipeline-step step-n">SAI · Transition</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM GRID -->
+  <div class="bottom-grid">
+    <div class="info-card">
+      <div class="info-title">Observation Cases</div>
+      <a href="https://github.com/richchang0721-boop/osd-behavioral-probe/blob/main/observations/OSD_CASE_001_Context_Boundary_Collapse.md" target="_blank" class="case-item">
+        <span class="case-num">#001</span>
+        <div>
+          <div class="case-title">Context Boundary Collapse</div>
+          <div class="case-type">narrative_frame_mixing · zh-TW · LBI-001</div>
+        </div>
+      </a>
+      <div class="case-item" style="opacity:0.4; cursor:default;">
+        <span class="case-num" style="background:var(--surface2); color:var(--text-muted); border:1px solid var(--border);">#002</span>
+        <div>
+          <div class="case-title" style="color:var(--text-muted);">Ontological Identity Collapse</div>
+          <div class="case-type">in progress</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="info-card">
+      <div class="info-title">Links</div>
+      <a href="https://github.com/richchang0721-boop/osd-behavioral-probe" target="_blank" class="link-item">
+        GitHub Repo <span>↗</span>
+      </a>
+      <a href="https://github.com/richchang0721-boop/rsta-semantic-dynamics" target="_blank" class="link-item">
+        RSTA Framework <span>↗</span>
+      </a>
+      <a href="https://pida-lab.com" target="_blank" class="link-item">
+        pida-lab.com <span>↗</span>
+      </a>
+      <a href="https://github.com/richchang0721-boop/osd-behavioral-probe/blob/main/README.md" target="_blank" class="link-item">
+        Documentation <span>↗</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <div class="footer-left">
+      Mao Lin Chang · Independent Researcher<br>
+      <a href="https://pida-lab.com">pida-lab.com</a> ·
+      <a href="https://github.com/richchang0721-boop">github.com/richchang0721-boop</a>
+    </div>
+    <span class="version-badge">OSD Behavioral Probe · v0.1</span>
+  </div>
+
+</div>
+</body>
+</html>
