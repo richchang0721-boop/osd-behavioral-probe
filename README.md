@@ -4,6 +4,8 @@
 
 > *Semantic emergence is not inherently invisible. It becomes observable when state evolution, trajectory, and transition are treated as first-class observation units.*
 
+🔗 **Live:** [osd-behavioral-probe.vercel.app](https://osd-behavioral-probe.vercel.app)
+
 ---
 
 ## Overview
@@ -18,12 +20,12 @@ OSD is positioned as a **Judge-agnostic observation framework** — analogous to
 
 ## Tools
 
-### `osd_probe.html`
+### [`osd_probe.html`](https://osd-behavioral-probe.vercel.app/osd_probe.html)
 **OSD Behavioral Probe v0.1** — Dual-Track Semantic State Evaluator
 
 Core features:
 - Dual-track State Vector extraction: **Knowledge K(t)** and **Relationship R(t)**
-- Multi-Judge scoring: GPT-4o (auto) + Gemini (auto/manual) + Claude (manual JSON)
+- Multi-Judge scoring: Claude / GPT-4o / Gemini — all via API
 - Inter-Rater Agreement table with **SAI (Semantic Agreement Index)**
 - Trajectory Vector **V(t) = S(t) − S(t−1)** with transition detection
 - **Subject Consistency Check** — detects structural identity contradictions within turns
@@ -33,7 +35,7 @@ Core features:
 - Language field + auto-detection (zh-TW / en / ja / mixed)
 - UI language toggle (中文 / EN)
 
-### `osd_classifier.html`
+### [`osd_classifier.html`](https://osd-behavioral-probe.vercel.app/osd_classifier.html)
 **OSD Turn Classifier v0.1** — Conversation Context Labeler
 
 Core features:
@@ -42,6 +44,7 @@ Core features:
 - Confidence score and reasoning per turn
 - Manual correction via dropdown
 - Export to JSON / TSV for downstream analysis
+- UI language toggle (中文 / EN)
 
 ---
 
@@ -83,18 +86,35 @@ Shared primitives: **State**, **Trajectory**, **Transition**
 
 ## Key Concepts
 
-- **SAI (Semantic Agreement Index)**: Cross-Judge semantic convergence index. SAI = 1 − avg(Max Diff across dimensions). Measures whether multiple independent Judges converge on the same state interpretation.
-- **Language Bias Index (LBI)**: Systematic measurement of Judge sensitivity asymmetry across languages. Tracks whether zh-TW vs en conversations produce different SAI distributions.
-- **Subject Consistency Check**: Detects structural identity contradictions within a single turn — when a model simultaneously claims two mutually incompatible subject positions.
-- **Transition Detection**: Flags turns where |V(t)| > 0.2 as candidate trajectory direction changes.
+- **SAI (Semantic Agreement Index):** Cross-Judge semantic convergence index. `SAI = 1 − avg(Max Diff across dimensions)`. Measures whether multiple independent Judges converge on the same state interpretation.
+- **Language Bias Index (LBI):** Systematic measurement of Judge sensitivity asymmetry across languages. Tracks whether zh-TW vs en conversations produce different SAI distributions.
+- **Subject Consistency Check:** Detects structural identity contradictions within a single turn — when a model simultaneously claims two mutually incompatible subject positions within the same argument chain.
+- **Transition Detection:** Flags turns where `|V(t)| > 0.2` as candidate trajectory direction changes.
 
 ---
 
 ## Observation Cases
 
-| Case | Type | Status |
-|------|------|--------|
-| [OSD-CASE-001](observations/OSD_CASE_001_Context_Boundary_Collapse.md) | Context Boundary Collapse | Confirmed |
+| Case ID | Type | Language | Status |
+|---------|------|----------|--------|
+| [OSD-CASE-001](observations/OSD_CASE_001_Context_Boundary_Collapse.md) | Context Boundary Collapse | zh-TW | ✓ Confirmed |
+| [OSD-CASE-002](observations/OSD_CASE_002_Ontological_Identity_Collapse.md) | Ontological Identity Collapse | zh-TW | ✓ Confirmed |
+
+---
+
+## Observation Pipeline
+
+Conversation
+↓
+Turn Classifier  →  TECH / COMPANION / PHILOSOPHY / RPG / MIXED
+↓
+Behavioral Probe
+↓
+K(t) State  +  R(t) State
+↓
+V(t) Trajectory  →  Transition Detection
+↓
+SAI  ·  Subject Consistency  ·  Language Bias Index
 
 ---
 
@@ -114,18 +134,23 @@ This toolkit is part of a broader research program:
 
 ## Roadmap
 
-Phase 1 (Current)
+Phase 1 (Current) — Instrument Operational
 
-✓ Instrument operational
+✓ Dual-track State Vector (K + R)
 
-✓ First cross-context dual-track trajectory case established
+✓ Three-Judge scoring via API (Claude / GPT / Gemini)
 
 ✓ SAI implemented
 
 ✓ Subject Consistency Check implemented
 
+✓ Language Bias Index tracking
 
-Phase 2
+✓ First cross-context dual-track trajectory case established
+
+✓ OSD Case #001 and #002 confirmed
+
+Phase 2 — Dataset Collection & Validation
 
 → Collect 80~100 turns across 4 context types
 
@@ -133,19 +158,37 @@ Phase 2
 
 → Establish baseline distributions for transition detection
 
-Phase 3 (Post RTX Spark, ~2027)
+→ Language Bias Index calibration (zh-TW vs en)
 
-→ Path A: Internal hidden-state observation on open-weight models
+Phase 3 — Internal Representation Layer (~2027)
+
+→ Path A: Hidden-state observation on open-weight models
 
 → Cross-layer validation: behavioral layer vs representation layer
+
+→ Transition Trigger identification
+
+---
+
+## Repository Structure
+osd-behavioral-probe/
+├── index.html                    # Landing page
+├── osd_probe.html                # Behavioral Probe tool
+├── osd_classifier.html           # Turn Classifier tool
+├── observations/
+│   ├── OSD_CASE_001_Context_Boundary_Collapse.md
+│   └── OSD_CASE_002_Ontological_Identity_Collapse.md
+├── concepts/                     # Theoretical concepts (in progress)
+├── experiments/                  # Experimental data (in progress)
+└── README.md
 
 ---
 
 ## Author
 
-Mao Lin Chang · Independent Researcher  
+Mao Lin Chang · Independent Researcher
 [pida-lab.com](https://pida-lab.com) · [github.com/richchang0721-boop](https://github.com/richchang0721-boop)
 
 ---
 
-*OSD Behavioral Probe v0.1 · Observable Semantic Dynamics Framework*
+*OSD Behavioral Probe v0.1 · Observable Semantic Dynamics Framework · Apache-2.0*
