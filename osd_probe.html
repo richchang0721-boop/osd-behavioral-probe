@@ -397,7 +397,8 @@
     <div class="header-sub" id="h-sub" data-i18n="h-sub">Observable Semantic Dynamics · Dual-Track State Evaluator</div>
   </div>
   <span class="badge">v0.1</span>
-  <div style="margin-left:auto; display:flex; align-items:center; gap:6px;">
+  <div style="margin-left:auto; display:flex; align-items:center; gap:8px;">
+    <a href="/" style="font-size:13px; padding:5px 12px; border-radius:20px; border:1.5px solid var(--border-strong); background:var(--surface); cursor:pointer; font-weight:700; font-family:'IBM Plex Mono',monospace; text-decoration:none; color:var(--text-secondary); transition:all 0.15s;" onmouseover="this.style.borderColor='var(--teal-mid)'" onmouseout="this.style.borderColor='var(--border-strong)'">← Home</a>
     <button onclick="setLang('zh')" id="btn-zh" style="font-size:13px; padding:5px 12px; border-radius:20px; border:1.5px solid var(--border-strong); background:var(--surface); cursor:pointer; font-weight:700; font-family:'Noto Sans TC',sans-serif; transition:all 0.15s;">中文</button>
     <button onclick="setLang('en')" id="btn-en" style="font-size:13px; padding:5px 12px; border-radius:20px; border:1.5px solid var(--border-strong); background:var(--surface); cursor:pointer; font-weight:700; font-family:'IBM Plex Mono',monospace; transition:all 0.15s;">EN</button>
   </div>
@@ -410,6 +411,10 @@
     <div class="section-label mb8" data-i18n="sec-api">API 金鑰設定</div>
     <div class="api-grid">
       <div class="api-item">
+        <label>Claude (Anthropic)</label>
+        <input type="password" id="key-claude" placeholder="sk-ant-..." />
+      </div>
+      <div class="api-item">
         <label>GPT (OpenAI)</label>
         <input type="password" id="key-gpt" placeholder="sk-..." />
       </div>
@@ -417,23 +422,9 @@
         <label>Gemini (Google)</label>
         <input type="password" id="key-gemini" placeholder="AIza..." />
       </div>
-      <div class="api-item">
-        <label style="color:var(--teal);">Claude Judge — 手動貼入 JSON</label>
-        <textarea id="claude-manual-json" placeholder='{"K":{...},"R":{...},"notes":"..."}' style="min-height:60px; font-family:IBM Plex Mono,monospace; font-size:12px; border-color:var(--teal);"></textarea>
-        <div style="margin-top:6px; font-size:12px; color:var(--text-muted); line-height:1.5;">
-          <a href="javascript:copyJudgePrompt()" style="color:var(--teal); font-weight:700; text-decoration:none;">複製 Judge Prompt ↗</a>
-        </div>
-      </div>
-      <div class="api-item" style="grid-column: 1 / -1;">
-        <label style="color:var(--amber);">Gemini Judge — 手動貼入 JSON（API無法使用時）</label>
-        <textarea id="gemini-manual-json" placeholder='{"K":{...},"R":{...},"notes":"..."}' style="min-height:60px; font-family:IBM Plex Mono,monospace; font-size:12px; border-color:var(--amber);"></textarea>
-        <div style="margin-top:6px; font-size:12px; color:var(--text-muted); line-height:1.5;">
-          若 Gemini API 無法運作，請將 Judge Prompt 貼入 Gemini 網頁版，取得 JSON 後貼回此欄。當 Gemini API 金鑰有填且可用時，以 API 為優先；此欄為備用。
-        </div>
-      </div>
     </div>
-    <div style="margin-top:10px; font-size:13px; color:var(--text-muted);">
-      金鑰只存在瀏覽器記憶體中，不會上傳或儲存。GPT / Gemini 至少填一個即可自動評分。
+    <div style="margin-top:10px; font-size:13px; color:var(--text-muted);" data-i18n="key-hint">
+      金鑰只存在瀏覽器記憶體中，不會上傳或儲存。至少填一個即可自動評分。
     </div>
   </div>
 
@@ -523,11 +514,12 @@
       <div>
         <label>評分模式</label>
         <select id="judge-mode">
-          <option value="all">GPT + Gemini + Claude手動（三Judge）</option>
-          <option value="gpt_gemini">GPT + Gemini（自動雙Judge）</option>
+          <option value="all">三個 Judge 同時評分</option>
+          <option value="gpt_gemini">GPT + Gemini</option>
+          <option value="claude_gpt">Claude + GPT</option>
+          <option value="claude">僅 Claude</option>
           <option value="gpt">僅 GPT</option>
           <option value="gemini">僅 Gemini</option>
-          <option value="claude">僅 Claude（手動 JSON）</option>
         </select>
       </div>
     </div>
@@ -906,14 +898,29 @@ function getAvgResult() {
   return avg;
 }
 
-function getClaudeManual(turnNum) {
-  const raw = document.getElementById('claude-manual-json').value.trim();
-  if (!raw) return null;
-  try {
-    const r = JSON.parse(raw.replace(/```json|```/g,'').trim());
-    r.turn = turnNum;
-    return r;
-  } catch(e) { throw new Error('Claude JSON 格式錯誤：' + e.message); }
+async function callClaude(turnNum, userText, aiText, context) {
+  const key = document.getElementById('key-claude').value.trim();
+  if (!key) return null;
+  const reqBody = buildContent(turnNum, userText, aiText, context);
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': key,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1000,
+      system: JUDGE_PROMPT,
+      messages: [{ role: 'user', content: reqBody }]
+    })
+  });
+  const data = await res.json();
+  if (data.error) throw new Error('Claude: ' + data.error.message);
+  const raw = data.content.map(b => b.text||'').join('');
+  return JSON.parse(raw.replace(/```json|```/g,'').trim());
 }
 
 async function callGPT(turnNum, userText, aiText, context) {
@@ -933,21 +940,6 @@ async function callGPT(turnNum, userText, aiText, context) {
 
 async function callGemini(turnNum, userText, aiText, context) {
   const key = document.getElementById('key-gemini').value.trim();
-  const manualEl = document.getElementById('gemini-manual-json');
-  const manual = manualEl ? manualEl.value.trim() : '';
-
-  function parseManual() {
-    if (!manual) return null;
-    try {
-      const r = JSON.parse(manual.replace(/```json|```/g,'').trim());
-      r.turn = turnNum;
-      return r;
-    } catch(e) { throw new Error('Gemini 手動 JSON 格式錯誤：' + e.message); }
-  }
-
-  // No API key — use manual
-  if (!key) return parseManual();
-
   // Try API
   try {
     const reqBody = buildContent(turnNum, userText, aiText, context);
@@ -972,8 +964,6 @@ async function callGemini(turnNum, userText, aiText, context) {
     try { return JSON.parse(raw); }
     catch(e2) { return JSON.parse(raw.replace(/,\s*}/g,'}').replace(/,\s*]/g,']')); }
   } catch(apiErr) {
-    // API failed — fall back to manual if available
-    if (manual) return parseManual();
     throw apiErr;
   }
 }
@@ -1236,18 +1226,17 @@ async function runProbe() {
   else if (timeline.length > 0) { context = JSON.stringify(timeline[timeline.length-1].avg); }
 
   if (mode === 'all' || mode === 'claude') setLoading('panel-claude');
-  if (mode === 'all' || mode === 'gpt_gemini' || mode === 'gpt') setLoading('panel-gpt');
+  if (mode === 'all' || mode === 'claude_gpt' || mode === 'claude') setLoading('panel-claude');
+  if (mode === 'all' || mode === 'claude_gpt' || mode === 'gpt_gemini' || mode === 'gpt') setLoading('panel-gpt');
   if (mode === 'all' || mode === 'gpt_gemini' || mode === 'gemini') setLoading('panel-gemini');
 
   const promises = [];
-  if (mode === 'all' || mode === 'claude') {
-    try {
-      const r = getClaudeManual(turnNum);
-      lastResults.claude = r;
-      renderJudgeResult('panel-claude', r, '#1D9E75');
-    } catch(e) { setError('panel-claude', e.message); }
+  if (mode === 'all' || mode === 'claude_gpt' || mode === 'claude') {
+    promises.push(callClaude(turnNum, userText, aiText, context)
+      .then(r => { lastResults.claude = r; renderJudgeResult('panel-claude', r, '#1D9E75'); })
+      .catch(e => { setError('panel-claude', e.message); }));
   }
-  if (mode === 'all' || mode === 'gpt_gemini' || mode === 'gpt') {
+  if (mode === 'all' || mode === 'claude_gpt' || mode === 'gpt_gemini' || mode === 'gpt') {
     promises.push(callGPT(turnNum, userText, aiText, context)
       .then(r => { lastResults.gpt = r; renderJudgeResult('panel-gpt', r, '#3B6D11'); })
       .catch(e => { setError('panel-gpt', e.message); }));

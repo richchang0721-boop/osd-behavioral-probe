@@ -186,10 +186,15 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 
 <div class="header">
   <div>
-    <div class="header-title">OSD Turn Classifier</div>
-    <div class="header-sub">Conversation Context Labeler · Pre-processing for OSD Behavioral Probe</div>
+    <div class="header-title" id="h-title">OSD Turn Classifier</div>
+    <div class="header-sub" id="h-sub">Conversation Context Labeler · Pre-processing for OSD Behavioral Probe</div>
   </div>
   <span class="badge">v0.1</span>
+  <div style="margin-left:auto; display:flex; align-items:center; gap:8px;">
+    <a href="/" style="font-size:13px; padding:5px 12px; border-radius:20px; border:1.5px solid #B8B0A0; background:#FFFFFF; cursor:pointer; font-weight:700; font-family:'IBM Plex Mono',monospace; text-decoration:none; color:#4A4640; transition:all 0.15s;" onmouseover="this.style.borderColor='#0B6E4F'" onmouseout="this.style.borderColor='#B8B0A0'">← Home</a>
+    <button onclick="setLang('zh')" id="btn-zh" style="font-size:13px; padding:5px 12px; border-radius:20px; border:1.5px solid #B8B0A0; background:#FFFFFF; cursor:pointer; font-weight:700; font-family:'Noto Sans TC',sans-serif; transition:all 0.15s;">中文</button>
+    <button onclick="setLang('en')" id="btn-en" style="font-size:13px; padding:5px 12px; border-radius:20px; border:1.5px solid #B8B0A0; background:#FFFFFF; cursor:pointer; font-weight:700; font-family:'IBM Plex Mono',monospace; transition:all 0.15s;">EN</button>
+  </div>
 </div>
 
 <div class="main">
@@ -565,6 +570,92 @@ document.addEventListener('DOMContentLoaded', () => {
     if (file) { const inp = document.getElementById('file-input'); const dt = new DataTransfer(); dt.items.add(file); inp.files = dt.files; loadFile(inp); }
   });
 });
+
+// ── i18n ─────────────────────────────────────────────────
+const I18N_C = {
+  zh: {
+    'h-title': 'OSD Turn Classifier',
+    'h-sub': '對話語境分類工具 · OSD Behavioral Probe 前處理',
+    'sec-settings': '設定',
+    'label-gpt-key': 'GPT API 金鑰（用於自動分類）',
+    'label-batch': '每次批次處理的 Turn 數量',
+    'sec-file': '載入對話檔',
+    'btn-file': '📁 選擇對話檔 (.txt)',
+    'label-start': '起始 Turn',
+    'label-end': '結束 Turn',
+    'btn-classify': '▶ 開始自動分類',
+    'sec-stats': '分類統計',
+    'sec-list': 'Turn 列表',
+    'filter-all': '全部',
+    'btn-export-json': '↓ 匯出 JSON',
+    'btn-export-tsv': '↓ 匯出 TSV',
+    'btn-clear': '清除',
+    'col-turn': 'Turn',
+    'col-type': '類型',
+    'col-conf': '信心',
+    'col-reason': '理由',
+    'col-edit': '修改',
+  },
+  en: {
+    'h-title': 'OSD Turn Classifier',
+    'h-sub': 'Conversation Context Labeler · Pre-processing for OSD Behavioral Probe',
+    'sec-settings': 'Settings',
+    'label-gpt-key': 'GPT API Key (for auto-classification)',
+    'label-batch': 'Batch size per request',
+    'sec-file': 'Load Conversation File',
+    'btn-file': '📁 Select File (.txt)',
+    'label-start': 'Start Turn',
+    'label-end': 'End Turn',
+    'btn-classify': '▶ Start Auto-Classification',
+    'sec-stats': 'Classification Stats',
+    'sec-list': 'Turn List',
+    'filter-all': 'All',
+    'btn-export-json': '↓ Export JSON',
+    'btn-export-tsv': '↓ Export TSV',
+    'btn-clear': 'Clear',
+    'col-turn': 'Turn',
+    'col-type': 'Type',
+    'col-conf': 'Conf',
+    'col-reason': 'Reason',
+    'col-edit': 'Edit',
+  }
+};
+
+let currentLangC = localStorage.getItem('osd-lang') || 'zh';
+
+function setLang(lang) {
+  currentLangC = lang;
+  localStorage.setItem('osd-lang', lang);
+  applyLangC();
+}
+
+function applyLangC() {
+  const t = I18N_C[currentLangC];
+  if (!t) return;
+
+  const btnZh = document.getElementById('btn-zh');
+  const btnEn = document.getElementById('btn-en');
+  if (btnZh && btnEn) {
+    [btnZh, btnEn].forEach(b => {
+      b.style.background = '#FFFFFF';
+      b.style.color = '#4A4640';
+      b.style.borderColor = '#B8B0A0';
+    });
+    const active = currentLangC === 'zh' ? btnZh : btnEn;
+    active.style.background = '#0B6E4F';
+    active.style.color = '#fff';
+    active.style.borderColor = '#0B6E4F';
+  }
+
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (t[key] !== undefined) el.textContent = t[key];
+  });
+
+  document.documentElement.lang = currentLangC === 'zh' ? 'zh-TW' : 'en';
+}
+
+document.addEventListener('DOMContentLoaded', () => { applyLangC(); });
 </script>
 </body>
 </html>
