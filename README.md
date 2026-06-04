@@ -171,16 +171,27 @@ Phase 3 — Internal Representation Layer (~2027)
 ---
 
 ## Repository Structure
+
 osd-behavioral-probe/
+
 ├── index.html                    # Landing page
+
 ├── osd_probe.html                # Behavioral Probe tool
+
 ├── osd_classifier.html           # Turn Classifier tool
+
 ├── observations/
+
 │   ├── OSD_CASE_001_Context_Boundary_Collapse.md
+
 │   └── OSD_CASE_002_Ontological_Identity_Collapse.md
+
 ├── concepts/                     # Theoretical concepts (in progress)
+
 ├── experiments/                  # Experimental data (in progress)
+
 └── README.md
+
 
 ---
 
