@@ -115,16 +115,28 @@ This toolkit is part of a broader research program:
 ## Roadmap
 
 Phase 1 (Current)
+
 ✓ Instrument operational
+
 ✓ First cross-context dual-track trajectory case established
+
 ✓ SAI implemented
+
 ✓ Subject Consistency Check implemented
+
+
 Phase 2
+
 → Collect 80~100 turns across 4 context types
+
 → Validate cross-context trajectory patterns
+
 → Establish baseline distributions for transition detection
+
 Phase 3 (Post RTX Spark, ~2027)
+
 → Path A: Internal hidden-state observation on open-weight models
+
 → Cross-layer validation: behavioral layer vs representation layer
 
 ---
