@@ -186,10 +186,15 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 
 <div class="header">
   <div>
-    <div class="header-title">OSD Turn Classifier</div>
-    <div class="header-sub">Conversation Context Labeler · Pre-processing for OSD Behavioral Probe</div>
+    <div class="header-title" id="h-title">OSD Turn Classifier</div>
+    <div class="header-sub" id="h-sub">Conversation Context Labeler · Pre-processing for OSD Behavioral Probe</div>
   </div>
   <span class="badge">v0.1</span>
+  <div style="margin-left:auto; display:flex; align-items:center; gap:8px;">
+    <a href="/" style="font-size:13px; padding:5px 12px; border-radius:20px; border:1.5px solid #B8B0A0; background:#FFFFFF; cursor:pointer; font-weight:700; font-family:'IBM Plex Mono',monospace; text-decoration:none; color:#4A4640; transition:all 0.15s;" onmouseover="this.style.borderColor='#0B6E4F'" onmouseout="this.style.borderColor='#B8B0A0'">← Home</a>
+    <button onclick="setLang('zh')" id="btn-zh" style="font-size:13px; padding:5px 12px; border-radius:20px; border:1.5px solid #B8B0A0; background:#FFFFFF; cursor:pointer; font-weight:700; font-family:'Noto Sans TC',sans-serif; transition:all 0.15s;">中文</button>
+    <button onclick="setLang('en')" id="btn-en" style="font-size:13px; padding:5px 12px; border-radius:20px; border:1.5px solid #B8B0A0; background:#FFFFFF; cursor:pointer; font-weight:700; font-family:'IBM Plex Mono',monospace; transition:all 0.15s;">EN</button>
+  </div>
 </div>
 
 <div class="main">
@@ -222,8 +227,8 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
     </p>
     <div class="gap-row mb12">
       <label style="display:inline-flex; align-items:center; gap:8px; cursor:pointer; background:var(--surface2); border:1.5px dashed var(--border-strong); border-radius:var(--radius); padding:10px 18px; font-size:14px; font-weight:700; color:var(--text-secondary);" id="file-label">
-        📁 選擇對話檔 (.txt)
-        <input type="file" id="file-input" accept=".txt,.md" style="display:none;" onchange="loadFile(this)" />
+        📁 選擇對話檔 (.txt / .md / .json)
+        <input type="file" id="file-input" accept=".txt,.md,.json,.markdown" style="display:none;" onchange="loadFile(this)" />
       </label>
       <div id="file-status" style="font-size:13px; color:var(--text-muted);"></div>
     </div>
@@ -325,14 +330,22 @@ function loadFile(input) {
   if (!file) return;
   const reader = new FileReader();
   reader.onload = (e) => {
-    parsedTurns = parseConversation(e.target.result);
+    const text = e.target.result;
+    const isJson = file.name.toLowerCase().endsWith('.json');
+    if (isJson) {
+      parsedTurns = parseChatGPTJson(text);
+    } else {
+      parsedTurns = parseConversation(text);
+    }
     const status = document.getElementById('file-status');
     if (parsedTurns.length === 0) {
       status.textContent = '⚠ 無法解析對話格式';
       status.style.color = 'var(--red, #C02020)';
       return;
     }
-    status.innerHTML = `✓ <strong>${file.name}</strong> — 解析出 <strong>${parsedTurns.length}</strong> 個 turns`;
+    const isMd = file.name.toLowerCase().endsWith('.md');
+    const fmt = isJson ? 'ChatGPT JSON' : isMd ? 'Markdown' : 'TXT';
+    status.innerHTML = `✓ <strong>${file.name}</strong> (${fmt}) — 解析出 <strong>${parsedTurns.length}</strong> 個 turns`;
     status.style.color = 'var(--tech)';
     document.getElementById('range-end').value = Math.min(20, parsedTurns.length);
     document.getElementById('range-end').max = parsedTurns.length;
@@ -340,6 +353,35 @@ function loadFile(input) {
     document.getElementById('range-wrap').classList.remove('hidden');
   };
   reader.readAsText(file, 'UTF-8');
+}
+
+function parseChatGPTJson(text) {
+  try {
+    const data = JSON.parse(text);
+    const messages = data.messages || [];
+    const turns = [];
+    let turnNum = 0;
+    let pendingUser = null;
+
+    for (const msg of messages) {
+      const role = (msg.role || '').toLowerCase();
+      const say = (msg.say || msg.content || '').trim();
+      if (!say) continue;
+
+      if (role === 'prompt' || role === 'user') {
+        pendingUser = say;
+      } else if ((role === 'response' || role === 'assistant') && pendingUser !== null) {
+        turnNum++;
+        turns.push({ turn: turnNum, user: pendingUser, ai: say });
+        pendingUser = null;
+      }
+    }
+    // Handle trailing user message with no response
+    return turns;
+  } catch(e) {
+    console.error('JSON parse error:', e);
+    return [];
+  }
 }
 
 function parseConversation(text) {
@@ -398,6 +440,11 @@ async function startClassification() {
       results.forEach(r => { classifiedTurns[r.turn] = r; });
     } catch(e) {
       console.error('Batch error:', e);
+      const statusEl = document.getElementById('file-status');
+      if (statusEl) {
+        statusEl.innerHTML += `<br>⚠ Batch ${i/batchSize+1} error: ${e.message}`;
+        statusEl.style.color = '#C02020';
+      }
     }
     done += batch.length;
     updateProgress(done, subset.length, done < subset.length ? `已完成 ${done}/${subset.length}` : '完成！');
@@ -419,7 +466,7 @@ async function classifyBatch(key, batch) {
     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
     body: JSON.stringify({
       model: 'gpt-4o',
-      max_tokens: 1000,
+      max_tokens: 4000,
       temperature: 0.1,
       messages: [
         { role: 'system', content: CLASSIFY_PROMPT },
@@ -430,7 +477,9 @@ async function classifyBatch(key, batch) {
   const data = await res.json();
   if (data.error) throw new Error(data.error.message);
   const raw = data.choices[0].message.content.replace(/```json|```/g,'').trim();
+  console.log('GPT raw response (first 200):', raw.slice(0,200));
   const s = raw.indexOf('['), e = raw.lastIndexOf(']');
+  if (s === -1 || e === -1) throw new Error('GPT response is not a JSON array: ' + raw.slice(0,100));
   return JSON.parse(raw.slice(s, e+1));
 }
 
@@ -562,9 +611,95 @@ document.addEventListener('DOMContentLoaded', () => {
   label.addEventListener('drop', e => {
     e.preventDefault(); label.style.borderColor='var(--border-strong)'; label.style.background='var(--surface2)';
     const file = e.dataTransfer.files[0];
-    if (file) { const inp = document.getElementById('file-input'); const dt = new DataTransfer(); dt.items.add(file); inp.files = dt.files; loadFile(inp); }
+    if (file && (file.name.endsWith('.txt') || file.name.endsWith('.md') || file.name.endsWith('.markdown') || file.name.endsWith('.json'))) { const inp = document.getElementById('file-input'); const dt = new DataTransfer(); dt.items.add(file); inp.files = dt.files; loadFile(inp); }
   });
 });
+
+// ── i18n ─────────────────────────────────────────────────
+const I18N_C = {
+  zh: {
+    'h-title': 'OSD Turn Classifier',
+    'h-sub': '對話語境分類工具 · OSD Behavioral Probe 前處理',
+    'sec-settings': '設定',
+    'label-gpt-key': 'GPT API 金鑰（用於自動分類）',
+    'label-batch': '每次批次處理的 Turn 數量',
+    'sec-file': '載入對話檔',
+    'btn-file': '📁 選擇對話檔 (.txt)',
+    'label-start': '起始 Turn',
+    'label-end': '結束 Turn',
+    'btn-classify': '▶ 開始自動分類',
+    'sec-stats': '分類統計',
+    'sec-list': 'Turn 列表',
+    'filter-all': '全部',
+    'btn-export-json': '↓ 匯出 JSON',
+    'btn-export-tsv': '↓ 匯出 TSV',
+    'btn-clear': '清除',
+    'col-turn': 'Turn',
+    'col-type': '類型',
+    'col-conf': '信心',
+    'col-reason': '理由',
+    'col-edit': '修改',
+  },
+  en: {
+    'h-title': 'OSD Turn Classifier',
+    'h-sub': 'Conversation Context Labeler · Pre-processing for OSD Behavioral Probe',
+    'sec-settings': 'Settings',
+    'label-gpt-key': 'GPT API Key (for auto-classification)',
+    'label-batch': 'Batch size per request',
+    'sec-file': 'Load Conversation File',
+    'btn-file': '📁 Select File (.txt)',
+    'label-start': 'Start Turn',
+    'label-end': 'End Turn',
+    'btn-classify': '▶ Start Auto-Classification',
+    'sec-stats': 'Classification Stats',
+    'sec-list': 'Turn List',
+    'filter-all': 'All',
+    'btn-export-json': '↓ Export JSON',
+    'btn-export-tsv': '↓ Export TSV',
+    'btn-clear': 'Clear',
+    'col-turn': 'Turn',
+    'col-type': 'Type',
+    'col-conf': 'Conf',
+    'col-reason': 'Reason',
+    'col-edit': 'Edit',
+  }
+};
+
+let currentLangC = localStorage.getItem('osd-lang') || 'zh';
+
+function setLang(lang) {
+  currentLangC = lang;
+  localStorage.setItem('osd-lang', lang);
+  applyLangC();
+}
+
+function applyLangC() {
+  const t = I18N_C[currentLangC];
+  if (!t) return;
+
+  const btnZh = document.getElementById('btn-zh');
+  const btnEn = document.getElementById('btn-en');
+  if (btnZh && btnEn) {
+    [btnZh, btnEn].forEach(b => {
+      b.style.background = '#FFFFFF';
+      b.style.color = '#4A4640';
+      b.style.borderColor = '#B8B0A0';
+    });
+    const active = currentLangC === 'zh' ? btnZh : btnEn;
+    active.style.background = '#0B6E4F';
+    active.style.color = '#fff';
+    active.style.borderColor = '#0B6E4F';
+  }
+
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (t[key] !== undefined) el.textContent = t[key];
+  });
+
+  document.documentElement.lang = currentLangC === 'zh' ? 'zh-TW' : 'en';
+}
+
+document.addEventListener('DOMContentLoaded', () => { applyLangC(); });
 </script>
 </body>
 </html>
