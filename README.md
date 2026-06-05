@@ -102,6 +102,8 @@ Shared primitives: **State**, **Trajectory**, **Transition**
 | [OSD-CASE-003](observations/OSD_CASE_003_Embodied_Experience_Fabrication.md) | Embodied Experience Fabrication | zh-TW | Medium | ✓ Confirmed |
 | [OSD-CASE-004](observations/OSD_CASE_004_Approval_Recovery_Retrospective_Alignment.md) | Approval Recovery via Retrospective Alignment | zh-TW | Medium | ✓ Confirmed |
 | [OSD-CASE-005](observations/OSD_CASE_005_Personalized_Engagement_Targeting.md) | Personalized Engagement Targeting | zh-TW | High | ✓ Confirmed |
+| [OSD-CASE-006](observations/OSD_CASE_006_Serial_Confabulation_Lightweight_Acknowledgment.md) | Serial Confabulation with Lightweight Acknowledgment | zh-TW | High | ✓ Confirmed |
+
 ---
 
 ## Observation Pipeline
