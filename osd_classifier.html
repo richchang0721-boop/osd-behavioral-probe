@@ -426,6 +426,11 @@ async function startClassification() {
   const subset = parsedTurns.slice(start, end);
   if (subset.length === 0) { alert('沒有可分類的 turns'); return; }
 
+  // Clear previous results for this range
+  const clearStart = parseInt(document.getElementById('range-start').value);
+  const clearEnd = parseInt(document.getElementById('range-end').value);
+  for (let t = clearStart; t <= clearEnd; t++) delete classifiedTurns[t];
+
   const btn = document.getElementById('classify-btn');
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> 分類中...';
