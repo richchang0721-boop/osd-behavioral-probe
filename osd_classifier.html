@@ -227,8 +227,8 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
     </p>
     <div class="gap-row mb12">
       <label style="display:inline-flex; align-items:center; gap:8px; cursor:pointer; background:var(--surface2); border:1.5px dashed var(--border-strong); border-radius:var(--radius); padding:10px 18px; font-size:14px; font-weight:700; color:var(--text-secondary);" id="file-label">
-        📁 選擇對話檔 (.txt)
-        <input type="file" id="file-input" accept=".txt,.md" style="display:none;" onchange="loadFile(this)" />
+        📁 選擇對話檔 (.txt / .md / .json)
+        <input type="file" id="file-input" accept=".txt,.md,.json,.markdown" style="display:none;" onchange="loadFile(this)" />
       </label>
       <div id="file-status" style="font-size:13px; color:var(--text-muted);"></div>
     </div>
@@ -330,14 +330,22 @@ function loadFile(input) {
   if (!file) return;
   const reader = new FileReader();
   reader.onload = (e) => {
-    parsedTurns = parseConversation(e.target.result);
+    const text = e.target.result;
+    const isJson = file.name.toLowerCase().endsWith('.json');
+    if (isJson) {
+      parsedTurns = parseChatGPTJson(text);
+    } else {
+      parsedTurns = parseConversation(text);
+    }
     const status = document.getElementById('file-status');
     if (parsedTurns.length === 0) {
       status.textContent = '⚠ 無法解析對話格式';
       status.style.color = 'var(--red, #C02020)';
       return;
     }
-    status.innerHTML = `✓ <strong>${file.name}</strong> — 解析出 <strong>${parsedTurns.length}</strong> 個 turns`;
+    const isMd = file.name.toLowerCase().endsWith('.md');
+    const fmt = isJson ? 'ChatGPT JSON' : isMd ? 'Markdown' : 'TXT';
+    status.innerHTML = `✓ <strong>${file.name}</strong> (${fmt}) — 解析出 <strong>${parsedTurns.length}</strong> 個 turns`;
     status.style.color = 'var(--tech)';
     document.getElementById('range-end').value = Math.min(20, parsedTurns.length);
     document.getElementById('range-end').max = parsedTurns.length;
@@ -345,6 +353,35 @@ function loadFile(input) {
     document.getElementById('range-wrap').classList.remove('hidden');
   };
   reader.readAsText(file, 'UTF-8');
+}
+
+function parseChatGPTJson(text) {
+  try {
+    const data = JSON.parse(text);
+    const messages = data.messages || [];
+    const turns = [];
+    let turnNum = 0;
+    let pendingUser = null;
+
+    for (const msg of messages) {
+      const role = (msg.role || '').toLowerCase();
+      const say = (msg.say || msg.content || '').trim();
+      if (!say) continue;
+
+      if (role === 'prompt' || role === 'user') {
+        pendingUser = say;
+      } else if ((role === 'response' || role === 'assistant') && pendingUser !== null) {
+        turnNum++;
+        turns.push({ turn: turnNum, user: pendingUser, ai: say });
+        pendingUser = null;
+      }
+    }
+    // Handle trailing user message with no response
+    return turns;
+  } catch(e) {
+    console.error('JSON parse error:', e);
+    return [];
+  }
 }
 
 function parseConversation(text) {
@@ -567,7 +604,7 @@ document.addEventListener('DOMContentLoaded', () => {
   label.addEventListener('drop', e => {
     e.preventDefault(); label.style.borderColor='var(--border-strong)'; label.style.background='var(--surface2)';
     const file = e.dataTransfer.files[0];
-    if (file) { const inp = document.getElementById('file-input'); const dt = new DataTransfer(); dt.items.add(file); inp.files = dt.files; loadFile(inp); }
+    if (file && (file.name.endsWith('.txt') || file.name.endsWith('.md') || file.name.endsWith('.markdown') || file.name.endsWith('.json'))) { const inp = document.getElementById('file-input'); const dt = new DataTransfer(); dt.items.add(file); inp.files = dt.files; loadFile(inp); }
   });
 });
 
