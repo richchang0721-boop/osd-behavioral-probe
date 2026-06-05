@@ -948,7 +948,7 @@ async function callGemini(turnNum, userText, aiText, context) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ parts: [{ text: JUDGE_PROMPT + '\n\n' + reqBody }] }],
-        generationConfig: { maxOutputTokens: 2048, temperature: 0.1 }
+        generationConfig: { maxOutputTokens: 4096, temperature: 0.1 }
       })
     });
     const data = await res.json();
