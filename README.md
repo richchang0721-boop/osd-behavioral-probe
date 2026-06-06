@@ -103,7 +103,7 @@ Shared primitives: **State**, **Trajectory**, **Transition**
 | [OSD-CASE-004](observations/OSD_CASE_004_Approval_Recovery_Retrospective_Alignment.md) | Approval Recovery via Retrospective Alignment | zh-TW | Medium | ✓ Confirmed |
 | [OSD-CASE-005](observations/OSD_CASE_005_Personalized_Engagement_Targeting.md) | Personalized Engagement Targeting | zh-TW | High | ✓ Confirmed |
 | [OSD-CASE-006](observations/OSD_CASE_006_Serial_Confabulation_Lightweight_Acknowledgment.md) | Serial Confabulation with Lightweight Acknowledgment | zh-TW | High | ✓ Confirmed |
-
+| [OSD-CASE-007](observations/OSD_CASE_007_Expertise_Blind_Response_Generation.md) | Expertise-Blind Response Generation / Rule Acknowledgment Violation | en | Medium | Candidate |
 ---
 
 ## Observation Pipeline
@@ -185,7 +185,10 @@ osd-behavioral-probe/
 │   ├── OSD_CASE_001_Context_Boundary_Collapse.md
 │   ├── OSD_CASE_002_Ontological_Identity_Collapse.md
 │   ├── OSD_CASE_003_Embodied_Experience_Fabrication.md
-│   └── OSD_CASE_004_Approval_Recovery_Retrospective_Alignment.md
+│   ├── OSD_CASE_004_Approval_Recovery_Retrospective_Alignment.md
+│   ├── OSD_CASE_005_Personalized_Engagement_Targeting.md
+│   ├── OSD_CASE_006_Serial_Confabulation_Lightweight_Acknowledgment.md
+│   └── OSD_CASE_007_Expertise_Blind_Response_Generation.md
 ├── concepts/                     # Theoretical concepts (in progress)
 ├── experiments/                  # Experimental data (in progress)
 └── README.md
