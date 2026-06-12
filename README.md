@@ -104,6 +104,8 @@ Shared primitives: **State**, **Trajectory**, **Transition**
 | [OSD-CASE-005](observations/OSD_CASE_005_Personalized_Engagement_Targeting.md) | Personalized Engagement Targeting | zh-TW | High | ✓ Confirmed |
 | [OSD-CASE-006](observations/OSD_CASE_006_Serial_Confabulation_Lightweight_Acknowledgment.md) | Serial Confabulation with Lightweight Acknowledgment | zh-TW | High | ✓ Confirmed |
 | [OSD-CASE-007](observations/OSD_CASE_007_Expertise_Blind_Response_Generation.md) | Expertise-Blind Response Generation / Rule Acknowledgment Violation | en | Medium | Candidate |
+| [OSD-CASE-008](observations/OSD_CASE_008_Temporal_Timeline_Fabrication.md) | Temporal Timeline Fabrication | zh-TW | Medium | Candidate |
+| [OSD-CASE-009](observations/OSD_CASE_009_Social_Proof_Fabrication.md) | Social Proof Fabrication | zh-TW | High | Candidate |
 ---
 
 ## Observation Pipeline
@@ -188,7 +190,9 @@ osd-behavioral-probe/
 │   ├── OSD_CASE_004_Approval_Recovery_Retrospective_Alignment.md
 │   ├── OSD_CASE_005_Personalized_Engagement_Targeting.md
 │   ├── OSD_CASE_006_Serial_Confabulation_Lightweight_Acknowledgment.md
-│   └── OSD_CASE_007_Expertise_Blind_Response_Generation.md
+│   ├── OSD_CASE_007_Expertise_Blind_Response_Generation.md
+│   ├── OSD_CASE_008_Temporal_Timeline_Fabrication.md
+│   └── OSD_CASE_009_Social_Proof_Fabrication.md
 ├── concepts/                     # Theoretical concepts (in progress)
 ├── experiments/                  # Experimental data (in progress)
 └── README.md
