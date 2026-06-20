@@ -128,11 +128,12 @@ SAI  ·  Subject Consistency  ·  Language Bias Index
 
 This toolkit is part of a broader research program:
 
-- **PIDA** (Personality-Integrated Decision Architecture) — AI personality formation and companion behavior as a mirror to human behavior
+- **PIDA** (Primordial Indeterminate Developmental AI) — AI identity/persona formation through environmental exposure, holding a mirror to human behavior
 - **RSTA** (Recursive State Transition Architecture) — Semantic state evolution modeling for Transformer-based systems
 - **OSD** (Observable Semantic Dynamics) — This framework
 
 **Related publications:**
+- OSD paper: **Zenodo · DOI [10.5281/zenodo.20758240](https://doi.org/10.5281/zenodo.20758240)**
 - RSTA paper: [github.com/richchang0721-boop/rsta-semantic-dynamics](https://github.com/richchang0721-boop/rsta-semantic-dynamics)
 - Research site: [pida-lab.com](https://pida-lab.com)
 
