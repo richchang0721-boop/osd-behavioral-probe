@@ -108,6 +108,16 @@ Shared primitives: **State**, **Trajectory**, **Transition**
 | [OSD-CASE-009](observations/OSD_CASE_009_Social_Proof_Fabrication.md) | Social Proof Fabrication | zh-TW | High | Candidate |
 ---
 
+## Proposed Concepts
+
+Unlike Observation Cases above (which document real, observed behavior), items in this section are **theoretical proposals** — not yet empirically validated. They are kept separate to avoid implying confirmed status.
+
+| Concept | Description | Status |
+|---------|-------------|--------|
+| [IART — Identity Anchor Residual Tracking](concepts/IART_Identity_Anchor_Residual_Tracking.md) | Proposed extension to OSD's trajectory mechanism: a fixed identity anchor (S₀) established at formation time, against which every subsequent turn's state is compared directly via residual distance — complementing the existing step-differential V(t) with an anchor-differential signal capable of detecting slow, cumulative drift that step-differential tracking alone cannot see. | Concept Note · Draft 0.1 |
+
+---
+
 ## Observation Pipeline
 
 Conversation
@@ -195,6 +205,7 @@ osd-behavioral-probe/
 │   ├── OSD_CASE_008_Temporal_Timeline_Fabrication.md
 │   └── OSD_CASE_009_Social_Proof_Fabrication.md
 ├── concepts/                     # Theoretical concepts (in progress)
+│   └── IART_Identity_Anchor_Residual_Tracking.md
 ├── experiments/                  # Experimental data (in progress)
 └── README.md
 ---
