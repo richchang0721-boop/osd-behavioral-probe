@@ -114,7 +114,7 @@ Unlike Observation Cases above (which document real, observed behavior), items i
 
 | Concept | Description | Status |
 |---------|-------------|--------|
-| [IART — Identity Anchor Residual Tracking](concepts/IART_Identity_Anchor_Residual_Tracking.md) | Proposed extension to OSD's trajectory mechanism: a fixed identity anchor (S₀) established at formation time, against which every subsequent turn's state is compared directly via residual distance — complementing the existing step-differential V(t) with an anchor-differential signal capable of detecting slow, cumulative drift that step-differential tracking alone cannot see. | Concept Note · Draft 0.1 |
+| [IART — Identity Anchor Residual Tracking](concepts/IART_Identity_Anchor_Residual_Tracking.md) | Proposed extension to OSD's trajectory mechanism: a fixed identity anchor (S₀) established at formation time, against which every subsequent turn's state is compared directly via residual distance — complementing the existing step-differential V(t) with an anchor-differential signal capable of detecting slow, cumulative drift that step-differential tracking alone cannot see. | Concept Note · Draft 0.2 |
 
 ---
 
