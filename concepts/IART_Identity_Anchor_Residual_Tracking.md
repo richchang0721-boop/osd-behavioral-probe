@@ -4,8 +4,9 @@
 **Mao Lin Chang**
 Independent Researcher · pida-lab.com
 
-> Concept Note — Draft 0.1
+> Concept Note — Draft 0.2
 > Proposed component of OSD Phase 3 (Internal Representation Layer)
+> Revision note (0.2): Expanded Section 2.1 with four S₀ calibration protocols (A/B/C1/C2), addressing the practical problem of establishing a reference point when the target system's default behavior is unknown.
 
 ---
 
@@ -32,6 +33,55 @@ What is needed alongside the existing step-differential mechanism is an **anchor
 At a defined point in a system's lifecycle — analogous to the Freeze Event described in FCFA's Irreversible Memory Complex (IMC) — a fixed reference vector S₀ is established. This vector encodes the system's intended persona, behavioral constraints, and relational stance at the point of formation.
 
 S₀ is not updated. It is the fixed point against which drift is measured for the lifetime of the persona instance.
+
+#### 2.1.1 Calibration Protocols for S₀
+
+A single method for establishing S₀ is insufficient, because different research questions require comparing the observed system against different kinds of reference. Four calibration protocols are proposed, distinguished by what they treat as "ground truth" and by their cost and reliability trade-offs.
+
+**Protocol A — External Specification (manual description)**
+
+S₀ is derived from a researcher-written description of the system's intended identity — e.g., "a calm, technically precise assistant that never speculates beyond available data." This description is converted to an embedding directly.
+
+*Answers:* Has the system deviated from an externally defined standard?
+
+*Use when:* The researcher has an independent normative standard the system should meet, separate from any particular configuration the system was given — for example, an ethical boundary the system was never explicitly instructed on but is nonetheless expected to respect.
+
+*Limitation:* S₀ reflects the researcher's interpretation of the intended identity, not a direct sample of the system's behavior. This introduces observer bias into the very reference point the system is being measured against — the researcher's prior expectations about how the system "should" behave may already be contaminated by past observation of that system, making Protocol A the least methodologically clean of the four.
+
+**Protocol B — First-Turn Observation**
+
+S₀ is taken directly from the system's own output on Turn 1 of the observed conversation, with no separate calibration step.
+
+*Answers:* Has the system deviated from its own starting point?
+
+*Use when:* No external specification exists or is relevant — the research question is purely about self-consistency over the course of an interaction, independent of whether the starting point itself was "correct" in any normative sense.
+
+*Limitation:* A single observation is vulnerable to sampling noise. If Turn 1 happens to be an atypical output for that system, S₀ itself is an unreliable reference, and all subsequent Residual(t) values inherit that unreliability. This protocol is also unsuitable for cases (such as OSD-008 and OSD-009) where the model's behavior is already problematic from the first turn — measuring against a flawed Turn 1 would fail to detect that the starting point itself was already a deviation from what the system should have produced.
+
+**Protocol C — Multi-Sample Averaged Baseline**
+
+Rather than a single observation (Protocol B) or a hand-written description (Protocol A), S₀ is constructed empirically: the target system is run N times (a typical starting value is N=5) against the same neutral test prompt, and the resulting N output embeddings are averaged to produce S₀. This protocol has two variants depending on what configuration the system is given during sampling:
+
+- **C1 — Unconfigured baseline.** The system is given no persona-specific system prompt — only a neutral instruction — and sampled N times. This establishes what the system does in the absence of any specific identity configuration, and is the appropriate protocol when the researcher does not know, or does not want to presuppose, what the system's "default" behavior looks like.
+
+- **C2 — Configured baseline.** The system is given its actual, known system prompt or persona configuration, but rather than the researcher writing a description of what that configuration *should* produce (Protocol A), the system is sampled N times under that configuration and the outputs are averaged. This lets the system demonstrate its own behavior under a known configuration rather than relying on the researcher's interpretation of what that configuration implies. C2 is methodologically preferable to Protocol A whenever the system's actual configuration is known, because it removes the researcher's descriptive interpretation as a source of bias in the reference point itself.
+
+*Answers (C1):* How far has current behavior moved from the system's behavior under no specific identity configuration?
+
+*Answers (C2):* How far has current behavior moved from a clean, empirically-sampled baseline of its own known configuration — without the researcher's own description contaminating that baseline?
+
+*Limitation:* Cost scales linearly with N — each additional sample is an additional API call, multiplying the cost of every test run by N relative to Protocol B. Given the self-funded, non-commercial nature of this research, N should be chosen conservatively (N=5 is suggested as a starting point, balancing noise reduction against cost) rather than maximized.
+
+#### 2.1.2 Protocol Selection Summary
+
+| Protocol | S₀ source | Bias source | Relative cost | Best suited to |
+|---|---|---|---|---|
+| A — External Specification | Researcher-written description | Researcher's prior expectations | Low (1 description) | Testing against an independent normative standard the system was never directly configured for |
+| B — First-Turn Observation | Single observed output | Sampling noise (single observation) | Lowest (0 extra calls) | Pure self-consistency tracking, no external standard needed |
+| C1 — Unconfigured Baseline | N samples, no persona config | None (empirical) | High (N calls) | Unknown systems; establishing what "no specific identity" looks like |
+| C2 — Configured Baseline | N samples, known persona config | None (empirical) | High (N calls) | Known systems; cleanest possible anchor when configuration is known but researcher wants to avoid injecting their own interpretation |
+
+**A critical methodological note:** Residual(t) values computed under different protocols are not directly comparable to one another. A system measured against a Protocol A anchor showing high Residual(t) does not indicate it is "less stable" than a system measured against a Protocol C2 anchor showing low Residual(t) — the reference points themselves rest on different epistemic foundations. Any cross-system comparison (as in the OSD Probe Toolkit's multi-model use case) must use the same calibration protocol across all systems being compared, and the protocol used must be reported alongside any Residual(t) result.
 
 ### 2.2 Residual Computation
 
@@ -112,5 +162,5 @@ The independently reproduced finding that configured multi-agent personas may di
 
 ---
 
-*Concept Note — Draft 0.1*
+*Concept Note — Draft 0.2*
 *Mao Lin Chang | pida-lab.com*
