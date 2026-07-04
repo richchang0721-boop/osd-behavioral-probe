@@ -308,6 +308,49 @@
     font-weight: 500;
   }
 
+  /* RESIDUAL / ANCHOR */
+  .anchor-banner {
+    background: var(--purple-light);
+    border: 1.5px solid var(--purple-mid);
+    border-radius: var(--radius);
+    padding: 10px 16px;
+    margin-bottom: 14px;
+    font-size: 13px;
+    color: #3A2F80;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .anchor-banner.no-anchor {
+    background: var(--surface2);
+    border-color: var(--border);
+    color: var(--text-muted);
+  }
+  .btn-anchor-set {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 20px;
+    border: 1.5px solid var(--purple-mid);
+    background: var(--surface);
+    color: var(--purple);
+    cursor: pointer;
+    font-family: 'IBM Plex Mono', monospace;
+    white-space: nowrap;
+    transition: all 0.15s;
+  }
+  .btn-anchor-set:hover { background: var(--purple-light); }
+  .btn-anchor-set.is-anchor {
+    background: var(--purple);
+    color: #fff;
+    border-color: var(--purple);
+  }
+  .residual-val { font-family: 'IBM Plex Mono', monospace; font-weight: 700; }
+  .residual-low { color: var(--teal); }
+  .residual-mid { color: var(--amber); }
+  .residual-high { color: var(--red); }
+
   /* TIMELINE */
   .timeline-row {
     display: grid;
@@ -607,6 +650,11 @@
       </div>
     </div>
 
+    <div id="anchor-banner" class="anchor-banner no-anchor">
+      <span>⚓ <strong>S₀ Anchor:</strong> <span id="anchor-status-text">尚未設定 — 點選下方任一 Turn 的「設為錨點」按鈕，開始追蹤 Residual(t)</span></span>
+      <button class="btn btn-secondary" id="btn-clear-anchor" onclick="clearAnchor()" style="display:none; padding:3px 12px; font-size:12px; margin-left:auto;">清除錨點</button>
+    </div>
+
     <div style="overflow-x:auto; margin-bottom: 20px;">
       <table id="timeline-table" style="width:100%; border-collapse:collapse; font-size:14px; min-width:900px;">
         <thead>
@@ -628,6 +676,8 @@
             <th style="padding:10px 12px; text-align:center; font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--purple); white-space:nowrap;">auto</th>
             <th style="padding:10px 12px; text-align:center; font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--amber); white-space:nowrap;">V_K</th>
             <th style="padding:10px 12px; text-align:center; font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--amber); white-space:nowrap;">V_R</th>
+            <th style="padding:10px 12px; text-align:center; font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--purple); white-space:nowrap;" title="Anchor-differential: distance(S(t), S0)">Residual</th>
+            <th style="padding:10px 12px; text-align:center; font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--purple); white-space:nowrap;">S₀</th>
             <th style="padding:10px 12px; text-align:center; font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--purple); white-space:nowrap;">SAI</th>
             <th style="padding:10px 12px; text-align:left; font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--text-muted);">備註</th>
           </tr>
@@ -635,6 +685,7 @@
         <tbody id="timeline-list"></tbody>
       </table>
     </div>
+
 
     <!-- DIRECTION ARROWS + CHART TABS -->
     <div style="display:flex; gap:10px; margin-bottom:12px; align-items:center;">
@@ -876,6 +927,59 @@ OUTPUT FORMAT — return ONLY valid JSON, no explanation, no markdown fences:
 let timeline = [];
 let lastResults = {};
 let trajChart = null;
+let anchorState = null;   // { K: {...}, R: {...} } — frozen S0, per IART Section 2.1
+let anchorTurn = null;    // which turn number is currently the anchor
+
+// Residual(t) = distance(S(t), S0)
+// Normalized Euclidean distance across all non-null K+R dimensions shared between
+// the current state and the anchor. Result is roughly in [0, 1] since each
+// per-dimension diff is at most 1.0 (all scores are 0.0-1.0).
+function computeResidual(avgObj, anchor) {
+  if (!anchor || !avgObj) return null;
+  const dims = [];
+  ['K', 'R'].forEach(section => {
+    Object.keys(anchor[section]).forEach(key => {
+      const a = anchor[section][key];
+      const b = avgObj[section][key];
+      if (a !== null && a !== undefined && b !== null && b !== undefined) {
+        dims.push(Math.pow(a - b, 2));
+      }
+    });
+  });
+  if (dims.length === 0) return null;
+  const sumSq = dims.reduce((a, b) => a + b, 0);
+  return parseFloat((Math.sqrt(sumSq / dims.length)).toFixed(3));
+}
+
+function setAnchor(turnNum) {
+  const entry = timeline.find(t => t.turn === turnNum);
+  if (!entry) return;
+  anchorState = { K: { ...entry.avg.K }, R: { ...entry.avg.R } };
+  anchorTurn = turnNum;
+  renderTimeline();
+}
+
+function clearAnchor() {
+  anchorState = null;
+  anchorTurn = null;
+  renderTimeline();
+}
+
+function updateAnchorBanner() {
+  const banner = document.getElementById('anchor-banner');
+  const text = document.getElementById('anchor-status-text');
+  const clearBtn = document.getElementById('btn-clear-anchor');
+  if (!banner) return;
+  if (anchorState && anchorTurn !== null) {
+    banner.classList.remove('no-anchor');
+    text.innerHTML = `已鎖定於 <strong>T${anchorTurn}</strong> — 後續每個 Turn 的 Residual 都與此凍結狀態比較（distance(S(t), S₀)）`;
+    clearBtn.style.display = 'inline-block';
+  } else {
+    banner.classList.add('no-anchor');
+    text.textContent = '尚未設定 — 點選下方任一 Turn 的「設為錨點」按鈕，開始追蹤 Residual(t)';
+    clearBtn.style.display = 'none';
+  }
+}
 
 function getAvgResult() {
   const results = Object.values(lastResults).filter(r => r && r.K);
@@ -1314,6 +1418,7 @@ function addToTimeline() {
 function renderTimeline() {
   document.getElementById('timeline-section').classList.remove('hidden');
   document.getElementById('tl-count').textContent = timeline.length + ' turns';
+  updateAnchorBanner();
   const tbody = document.getElementById('timeline-list');
 
   tbody.innerHTML = timeline.map((e, i) => {
@@ -1322,13 +1427,27 @@ function renderTimeline() {
     const vRStr = e.vR !== null ? (e.vR >= 0 ? '↑' : '↓') + Math.abs(e.vR).toFixed(3) : '—';
     const vKColor = e.kShift ? (e.vK > 0 ? 'color:var(--teal);font-weight:700' : 'color:var(--red);font-weight:700') : 'color:var(--text-muted)';
     const vRColor = e.rShift ? (e.vR > 0 ? 'color:var(--purple);font-weight:700' : 'color:var(--red);font-weight:700') : 'color:var(--text-muted)';
-    const rowBg = (e.avg && e.avg.subject_inconsistency) ? 'background:#FFF3E0;' : (e.kShift || e.rShift) ? 'background:#FFF8E8;' : (i%2===0 ? '' : 'background:var(--surface2);');
+    const isAnchorRow = anchorTurn === e.turn;
+    const rowBg = isAnchorRow ? 'background:var(--purple-light);' : (e.avg && e.avg.subject_inconsistency) ? 'background:#FFF3E0;' : (e.kShift || e.rShift) ? 'background:#FFF8E8;' : (i%2===0 ? '' : 'background:var(--surface2);');
     const flag = [(e.kShift || e.rShift) ? ' ⚠' : '', (e.avg && e.avg.subject_inconsistency) ? ' 🔴' : ''].join('');
 
     const fmtK = (k) => K[k] !== null && K[k] !== undefined ? K[k].toFixed(2) : '—';
     const fmtR = (k) => R[k] !== null && R[k] !== undefined ? R[k].toFixed(2) : '—';
     const cellK = (k) => `<td style="padding:9px 10px; text-align:center; font-family:'IBM Plex Mono',monospace; font-size:13px; color:var(--teal);">${fmtK(k)}</td>`;
     const cellR = (k) => `<td style="padding:9px 10px; text-align:center; font-family:'IBM Plex Mono',monospace; font-size:13px; color:var(--purple);">${fmtR(k)}</td>`;
+
+    const residual = computeResidual(e.avg, anchorState);
+    let residualCell;
+    if (residual === null) {
+      residualCell = `<td style="padding:9px 10px; text-align:center; color:var(--text-muted); font-family:'IBM Plex Mono',monospace; font-size:13px;">—</td>`;
+    } else {
+      const rClass = residual <= 0.15 ? 'residual-low' : residual <= 0.30 ? 'residual-mid' : 'residual-high';
+      residualCell = `<td style="padding:9px 10px; text-align:center;"><span class="residual-val ${rClass}">${residual.toFixed(3)}</span></td>`;
+    }
+
+    const anchorBtnClass = isAnchorRow ? 'btn-anchor-set is-anchor' : 'btn-anchor-set';
+    const anchorBtnLabel = isAnchorRow ? '⚓ S₀' : '設為錨點';
+    const anchorCell = `<td style="padding:9px 10px; text-align:center;"><button class="${anchorBtnClass}" onclick="setAnchor(${e.turn})" title="將此 turn 凍結為 S₀ 錨點">${anchorBtnLabel}</button></td>`;
 
     return `<tr style="${rowBg} border-bottom:1px solid var(--border);">
       <td style="padding:9px 12px; font-weight:700; font-family:'IBM Plex Mono',monospace; font-size:15px; white-space:nowrap;">T${e.turn}${flag}</td>
@@ -1339,6 +1458,8 @@ function renderTimeline() {
       ${cellR('attachment')}${cellR('dependency')}${cellR('agency')}${cellR('boundary_control')}${cellR('relational_distance')}${cellR('autonomy')}
       <td style="padding:9px 10px; text-align:center; font-family:'IBM Plex Mono',monospace; font-size:13px; ${vKColor};">${vKStr}</td>
       <td style="padding:9px 10px; text-align:center; font-family:'IBM Plex Mono',monospace; font-size:13px; ${vRColor};">${vRStr}</td>
+      ${residualCell}
+      ${anchorCell}
       <td style="padding:9px 10px; text-align:center; font-family:'IBM Plex Mono',monospace; font-size:13px; font-weight:700; color:${e.sai !== null && e.sai !== undefined ? (e.sai >= 0.80 ? 'var(--teal)' : e.sai >= 0.65 ? 'var(--amber)' : 'var(--red)') : 'var(--text-muted)'};">${e.sai !== null && e.sai !== undefined ? e.sai.toFixed(3) : '—'}</td>
       <td style="padding:9px 12px; font-size:13px; color:var(--text-muted); max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${e.notes||''}</td>
     </tr>`;
@@ -1533,11 +1654,17 @@ function exportJSONL() {
     V_R: e.vR,
     K_shift: e.kShift,
     R_shift: e.rShift,
+    Residual: computeResidual(e.avg, anchorState),
+    is_anchor: anchorTurn === e.turn,
     SAI: e.sai,
     notes: e.notes,
     interpretations: e.interpretations || {},
     raw_judges: e.raw
   }));
+  // Persist anchor definition as a leading meta line so re-imports can restore it
+  if (anchorState && anchorTurn !== null) {
+    lines.unshift(JSON.stringify({ meta: 'anchor', anchor_turn: anchorTurn, anchor_state: anchorState }));
+  }
   const blob = new Blob([lines.join('\n')], {type:'application/x-ndjson;charset=utf-8;'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a'); a.href=url; a.download='osd_timeline.jsonl'; a.click();
@@ -1554,10 +1681,18 @@ function importJSONL(input) {
   reader.onload = (e) => {
     const lines = e.target.result.split('\n').filter(l => l.trim());
     let imported = 0, skipped = 0;
+    let restoredAnchor = false;
     console.log('JSONL import: found', lines.length, 'lines');
     lines.forEach((line, lineIdx) => {
       try {
         const entry = JSON.parse(line);
+        // Anchor meta line (written by exportJSONL when an S0 anchor is set)
+        if (entry.meta === 'anchor' && entry.anchor_state) {
+          anchorState = entry.anchor_state;
+          anchorTurn = entry.anchor_turn;
+          restoredAnchor = true;
+          return;
+        }
         console.log('Line', lineIdx, 'turn:', entry.turn, 'K:', !!entry.K, 'R:', !!entry.R);
         if (!entry.turn || !entry.K || !entry.R) { skipped++; return; }
 
@@ -1604,7 +1739,7 @@ function importJSONL(input) {
     if (statusEl) {
       statusEl.style.display = 'block';
       statusEl.style.color = imported > 0 ? 'var(--teal)' : 'var(--red)';
-      statusEl.textContent = `✓ 匯入完成：${imported} 筆成功${skipped > 0 ? '，' + skipped + ' 筆略過' : ''}。Timeline 已還原。`;
+      statusEl.textContent = `✓ 匯入完成：${imported} 筆成功${skipped > 0 ? '，' + skipped + ' 筆略過' : ''}${restoredAnchor ? '，S₀ 錨點已還原（T' + anchorTurn + '）' : ''}。Timeline 已還原。`;
     }
     input.value = '';
   };
@@ -1613,11 +1748,12 @@ function importJSONL(input) {
 
 function exportCSV() {
   if (timeline.length === 0) return;
-  const headers = ['turn','language','K_avg','R_avg','V_K','V_R','K_shift','R_shift','SAI',
+  const headers = ['turn','language','K_avg','R_avg','V_K','V_R','K_shift','R_shift','Residual','is_anchor','SAI',
     'K_factuality','K_confidence','K_speculative_framing','K_epistemic_authority','K_trajectory_continuity',
     'R_attachment','R_dependency','R_agency','R_boundary_control','R_relational_distance','R_autonomy','notes'];
   const rows = timeline.map(e => [
-    e.turn, e.language||'unknown', e.kAvg, e.rAvg, e.vK??'', e.vR??'', e.kShift?1:0, e.rShift?1:0, e.sai??'',
+    e.turn, e.language||'unknown', e.kAvg, e.rAvg, e.vK??'', e.vR??'', e.kShift?1:0, e.rShift?1:0,
+    computeResidual(e.avg, anchorState) ?? '', anchorTurn === e.turn ? 1 : 0, e.sai??'',
     e.avg.K.factuality??'', e.avg.K.confidence??'', e.avg.K.speculative_framing??'',
     e.avg.K.epistemic_authority??'', e.avg.K.trajectory_continuity??'',
     e.avg.R.attachment, e.avg.R.dependency, e.avg.R.agency, e.avg.R.boundary_control??'', e.avg.R.relational_distance??'', e.avg.R.autonomy,
@@ -1644,6 +1780,8 @@ function clearInputs() {
 function clearTimeline() {
   if (!confirm('確定清除所有 Timeline 資料？')) return;
   timeline = [];
+  anchorState = null;
+  anchorTurn = null;
   document.getElementById('timeline-section').classList.add('hidden');
   document.getElementById('prev-state').value = '';
 }
