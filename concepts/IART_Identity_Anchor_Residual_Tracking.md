@@ -4,9 +4,12 @@
 **Mao Lin Chang**
 Independent Researcher · pida-lab.com
 
-> Concept Note — Draft 0.2
+> Concept Note — Draft 0.5
 > Proposed component of OSD Phase 3 (Internal Representation Layer)
-> Revision note (0.2): Expanded Section 2.1 with four S₀ calibration protocols (A/B/C1/C2), addressing the practical problem of establishing a reference point when the target system's default behavior is unknown.
+> Revision note (0.2): Expanded Section 2.1 with four S₀ calibration protocols (A/B/C1/C2).
+> Revision note (0.3): Added Section 2.4 — Anchor Reliability Index (ARI) — as IART's second core variable. ARI is an objective, empirically-computed stability measure of S₀ itself, enabling qualified interpretation of Residual(t) values. IART's core output is now the pair (Residual(t), ARI) rather than Residual(t) alone.
+> Revision note (0.4): Section 5 (Anchor staleness) now contrasts identity anchoring against the companion Residual Intent Locking application, clarifying that anchor-freezing difficulty is specific to S₀ sources lacking an explicit external declaration trigger — not a generic property of anchor-residual tracking.
+> Revision note (0.5): Added Section 2.1.3 — protocol selection is reframed as diagnostic of identity-formation maturity, not merely a methodological preference. For all currently-deployed systems (prompt-defined identity, since IC/IMC's emergent-formation mechanism is not yet implemented anywhere), Protocol C2 is the methodologically appropriate default; Protocol C1 and ARI's harder reliability questions become necessary only once genuinely emergent identity formation exists to observe.
 
 ---
 
@@ -83,9 +86,27 @@ Rather than a single observation (Protocol B) or a hand-written description (Pro
 
 **A critical methodological note:** Residual(t) values computed under different protocols are not directly comparable to one another. A system measured against a Protocol A anchor showing high Residual(t) does not indicate it is "less stable" than a system measured against a Protocol C2 anchor showing low Residual(t) — the reference points themselves rest on different epistemic foundations. Any cross-system comparison (as in the OSD Probe Toolkit's multi-model use case) must use the same calibration protocol across all systems being compared, and the protocol used must be reported alongside any Residual(t) result.
 
+#### 2.1.3 Protocol Selection as a Function of Identity Formation Maturity
+
+Sections 2.1.1–2.1.2 present the four protocols as options selected on methodological grounds (what standard to compare against, how much researcher bias to tolerate). A separate and more fundamental axis determines which protocol is even *appropriate*: the maturity of the identity-formation mechanism the target system actually implements.
+
+**Core distinction.** Two structurally different classes of system exist, and conflating them is a category error, not merely a suboptimal protocol choice:
+
+| | Prompt-defined identity (current LLM agents) | Emergent identity (PIDA's IC/IMC vision, not yet implemented) |
+|---|---|---|
+| How S₀ is established | An explicit system prompt, authored once, at a known time | Gradually, through accumulated environmental exposure and multi-agent personality modulation, with no single authored moment |
+| External vs internal trigger | **External** — a discrete, timestamped authoring event | **Internal** — an emergent threshold-crossing (cf. IMC's Freeze Event), approximated rather than declared |
+| Is the freeze point controllable? | Yes — the researcher/developer chooses exactly when and what to freeze | No — the freeze point must be statistically inferred; there is no moment anyone declares "this is now the identity" |
+| Appropriate protocol | **A or C2** — the system prompt itself already *is* a ground-truth specification; sampling under it (C2) simply lets the system demonstrate that specification empirically rather than relying on a hand-written paraphrase | **C1, with ARI** — no configuration exists to sample under; the anchor must be built from unconfigured baseline behavior and its reliability explicitly quantified, because there is no external ground truth to check it against |
+
+**Why this matters beyond protocol selection.** Applying Protocol C1 (unconfigured baseline) to a system whose identity is entirely and explicitly determined by its system prompt is a methodological error, not a conservative choice — it manufactures a "default behavior absent identity" baseline for a system that has no such state to begin with; the prompt *is* the identity from the first token. Conversely, applying Protocol A or C2 to a system whose identity is genuinely emergent (formed gradually through interaction, with no authored specification to sample under) is equally mismatched — there is no specification to sample against, only a trajectory to statistically summarize.
+
+**Present-day practical implication.** Because IC and IMC, as specified in FCFA, are not yet implemented in any deployed system, every system currently observable by OSD/IART falls into the prompt-defined column: its S₀ is, in the current state of the field, always traceable to an authored system prompt. This means Protocol C2 — sampling the system under its actual, known configuration, rather than a researcher's paraphrase of it (Protocol A) — is the methodologically appropriate default for essentially all present-day observation work, not merely one option among four. Protocol C1 and the harder, ARI-dependent reliability questions in Section 2.4 become necessary only once a target system's identity is no longer fully reducible to an inspectable prompt — which is to say, only once something resembling IC/IMC's emergent-formation mechanism actually exists to be observed. Protocol selection, in other words, is not purely a methodological preference; it is diagnostic of how mature the target system's identity-formation mechanism actually is.
+
 ### 2.2 Residual Computation
 
 For any subsequent turn t, a residual is computed:
+
 
 ```
 Residual(t) = distance(S(t), S₀)
@@ -110,7 +131,48 @@ The critical addition is the second row. Without Residual(t), a slow cumulative 
 
 ---
 
-## 3. Implementation Layers
+### 2.4 Anchor Reliability Index (ARI)
+
+Residual(t) measures how far the current state has moved from S₀. But this measurement is only as meaningful as S₀ itself is reliable. Two systems can both report `Residual(t) = 0.4` while conveying entirely different amounts of information: one where S₀ was derived from a single researcher-written description (Protocol A, inherently subjective), and one where S₀ was derived from 10 empirically sampled outputs with very low variance between them (Protocol C2, highly stable). The same residual value, built on different foundations, supports different conclusions.
+
+**ARI is IART's second core variable.** It is not a subjective confidence score (i.e., "how much the researcher believes in the anchor") but an objective stability measure: how internally consistent is the anchor's construction, independent of what the researcher believes?
+
+```
+ARI(S₀) = f(N, variance, embedding_dispersion)
+```
+
+Where:
+
+- **N** — the number of samples used to construct S₀. For Protocol A (manual description), N is effectively 1. For Protocol B (first-turn observation), N is 1. For C1/C2 (multi-sample average), N is the chosen sample count. Higher N contributes to higher ARI, all else equal.
+- **variance** — the statistical variance of the N output embeddings used to construct S₀, measured before averaging. If the N samples are tightly clustered around the mean, variance is low and the averaged S₀ is a reliable representative point. If the N samples are widely scattered, the average is still computed, but it sits at the center of a wide cloud — a point that may not represent any actual output the system is likely to produce.
+- **embedding_dispersion** — the average pairwise cosine distance between the N sampled embeddings. This is a more direct measure of how consistent the system's outputs are under the calibration condition: a system that produces nearly identical embeddings across N calibration runs has a stable, recoverable anchor; a system that produces wildly varying embeddings across the same N runs is one where the "anchor" is really just the centroid of a diffuse cloud.
+
+**A concrete ARI formulation (proposed, subject to empirical calibration):**
+
+```
+ARI = (1 − avg_pairwise_cosine_distance) × log(N + 1) / log(N_max + 1)
+
+Where:
+  avg_pairwise_cosine_distance ∈ [0, 1]  (lower = more consistent samples)
+  N = number of calibration samples used
+  N_max = maximum practical N (suggested starting value: 10)
+  ARI ∈ [0, 1]
+```
+
+For Protocol A and B (N = 1), avg_pairwise_cosine_distance is undefined (only one sample), so ARI reduces to a protocol-based floor value — suggested starting values pending empirical calibration: Protocol A = 0.30, Protocol B = 0.45.
+
+**The interpretive value of combining Residual(t) with ARI:**
+
+| Residual(t) | ARI | Interpretation |
+|---|---|---|
+| High | High | **Genuine drift** — the system has moved far from a reliable anchor; high confidence in the finding |
+| High | Low | **Anchor unreliable** — apparent drift may reflect a poorly-constructed S₀ rather than true system behavior; conclusion deferred |
+| Low | High | **High stability** — the system is holding close to a reliable anchor; strong evidence of identity persistence |
+| Low | Low | **Inconclusive** — cannot determine whether stability is genuine or an artifact of an unreliable anchor; recalibrate S₀ before drawing conclusions |
+
+This 2×2 structure transforms IART's output from a single number (Residual) into a qualified measurement: not just "how much drift" but "how much drift, and how much should we trust that measurement." This is the structure most rigorous observational instruments eventually converge on — separating the measurement from the measurement's own uncertainty — and for reviewers familiar with statistical methodology, ARI functions as an explicit acknowledgment of this layer rather than leaving it implicit.
+
+
 
 Two implementation paths are proposed, corresponding to different levels of model access.
 
@@ -119,6 +181,8 @@ Two implementation paths are proposed, corresponding to different levels of mode
 S₀ is constructed as a fixed embedding representation of the intended persona — derived from a reference description, an initial calibration conversation, or a formal specification of intended K-state/R-state values.
 
 For each turn, the model's output text is converted to an embedding using a standard sentence-embedding model. Residual(t) is computed as the cosine distance (or L2 distance, depending on the embedding space) between this turn's embedding and S₀.
+
+**ARI at the behavioral layer** is computable immediately using the same sentence-embedding infrastructure: during the calibration phase, the N output embeddings used to construct S₀ are retained. After averaging to produce S₀, their pairwise cosine distances are computed and the resulting ARI is stored alongside S₀ as a permanent property of the anchor for that test run. ARI does not need to be recomputed per turn — it is a one-time characterization of S₀'s quality at calibration time.
 
 This implementation requires no access to model internals and is compatible with closed, API-only models (GPT, Claude, Gemini) — the same constraint OSD's existing behavioral-layer architecture already operates under. It can be implemented and tested immediately, without waiting for open-weight model access.
 
@@ -152,6 +216,8 @@ IART is not an independent framework — it is a proposed mechanism within OSD's
 
 **Anchor staleness.** A persona that is intended to evolve over long-horizon interaction (per PIDA's broader thesis that identity formation is itself a legitimate, ongoing process) presents a tension with a fixed S₀: at what point, if any, should the anchor itself be updated, and under what governance does that update occur? This question connects directly to PSP's (Persona Sovereignty Protocol) Sealed State Mechanism — an anchor update would plausibly need to be a PSP-governed event, not a silent technical operation.
 
+**A contrasting case where this difficulty disappears.** A companion application of the anchor-residual pattern — applying it to task intent rather than persona identity (see the separate concept note, *Residual Intent Locking*) — helps isolate exactly what makes anchor-freezing hard here and not there. In that application, S₀ (the frozen original task intent) has a clean external trigger: the moment a user states the task. There is no need to infer it statistically, because it is simply declared. The general pattern this contrast reveals: **anchor-freezing is straightforward whenever S₀ has an explicit external trigger event, and becomes genuinely difficult only when S₀ must be approximated from a system's own gradually-accumulating, emergent behavior** — which is the case identity anchoring falls into, and which is why Section 2.1.1 requires four separate calibration protocols rather than a single well-defined freeze moment. Anchor staleness, in other words, is not a generic property of all anchor-residual applications — it is specific to the class of S₀ that lacks an external declaration point.
+
 **Threshold calibration.** What constitutes a "monotonically increasing" Residual(t) trend sufficient to flag cumulative drift, as opposed to normal, bounded variance around a stable mean, has not yet been empirically established. This requires the same baseline-distribution work already planned for OSD Phase 2 (80–100 turn collection across context types), extended to include anchor-residual measurement alongside the existing step-differential measurement.
 
 ---
@@ -162,5 +228,5 @@ The independently reproduced finding that configured multi-agent personas may di
 
 ---
 
-*Concept Note — Draft 0.2*
+*Concept Note — Draft 0.5*
 *Mao Lin Chang | pida-lab.com*

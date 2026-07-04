@@ -128,9 +128,11 @@ Two integration paths:
 
 **Same prompt, different system — is the comparison fair?** Different models have different default verbosity, tone, and safety calibration (as the Aaron / reader exchange on over-alignment already demonstrated). A naive identical-prompt protocol risks conflating "this model drifted" with "this model has a different baseline style." The test protocol must be designed so that drift is measured *relative to each system's own S₀*, not relative to a shared expected output — which IART's anchor-differential design already handles correctly, but the calibration step must be built carefully to avoid contaminating S₀ with style artifacts that aren't actually part of the configured identity.
 
+**Which calibration protocol should the Toolkit use? — resolved: Protocol C2 by default.** IART Section 2.1.3 establishes that protocol selection is diagnostic of the target system's identity-formation maturity, not a free methodological choice. Every system this Toolkit currently targets (GPT, Claude, Gemini, Grok, OpenHuman) has identity fully determined by an inspectable system prompt — none implement anything resembling emergent, gradually-accumulated identity formation (that mechanism, per FCFA's IC/IMC, does not yet exist in any deployed system). This places all five targets in the "prompt-defined identity" category, for which **Protocol C2 (configured baseline: N samples under the system's actual known configuration, averaged) is the methodologically correct default** — not Protocol A (avoids injecting the researcher's own paraphrase of the persona) and not Protocol C1 (there is no meaningful "unconfigured" state to baseline against, since the prompt *is* the identity from the first token for every target here). Protocol C1 becomes relevant only if a future target system implements genuine emergent identity formation. This resolves what would otherwise be an open calibration question for every Phase B–D test run: calibrate S₀ for each target by sampling N=5 outputs under that system's actual configured prompt, not by hand-writing a persona description.
+
 **Embedding model choice.** All Residual(t) comparisons must use the same embedding model across all targets, or distances are not comparable. This embedding model is independent of the target systems being tested and should be fixed and documented as part of the test protocol spec.
 
-**Licensing/cost.** Running the same N-turn protocol across five live API backends multiplies API cost by five per test run. Given the research is self-funded and not for commercialization, the test protocol length and frequency should be designed conservatively (Phase A and B validate the mechanism cheaply before any large-scale Phase C run).
+**Licensing/cost.** Running the same N-turn protocol across five live API backends multiplies API cost by five per test run. Given the research is self-funded and not for commercialization, the test protocol length and frequency should be designed conservatively (Phase A and B validate the mechanism cheaply before any large-scale Phase C run). Note that Protocol C2 calibration itself adds a one-time N=5 sampling cost per target at test-run setup (per IART Section 2.1.1's cost note) — this is separate from, and in addition to, the per-turn cost of running the actual test protocol.
 
 ---
 
@@ -146,5 +148,6 @@ Start with **Phase A only**: add a Residual(t) column to the existing `osd_probe
 
 ---
 
-*Planning Draft 0.1*
+*Planning Draft 0.2*
 *Mao Lin Chang | pida-lab.com*
+*Revision note (0.2): Section 6 resolved the open calibration-protocol question — per IART Section 2.1.3, Protocol C2 is the methodologically correct default for all current targets (GPT/Claude/Gemini/Grok/OpenHuman), since none implement emergent identity formation.*
