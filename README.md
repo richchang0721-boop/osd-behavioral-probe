@@ -114,7 +114,9 @@ Unlike Observation Cases above (which document real, observed behavior), items i
 
 | Concept | Description | Status |
 |---------|-------------|--------|
-| [IART — Identity Anchor Residual Tracking](concepts/IART_Identity_Anchor_Residual_Tracking.md) | Proposed extension to OSD's trajectory mechanism: a fixed identity anchor (S₀) established at formation time, against which every subsequent turn's state is compared directly via residual distance — complementing the existing step-differential V(t) with an anchor-differential signal capable of detecting slow, cumulative drift that step-differential tracking alone cannot see. | Concept Note · Draft 0.2 |
+| [IART — Identity Anchor Residual Tracking](concepts/IART_Identity_Anchor_Residual_Tracking.md) | Proposed extension to OSD's trajectory mechanism: a fixed identity anchor (S₀) established at formation time, against which every subsequent turn's state is compared directly via residual distance — complementing the existing step-differential V(t) with an anchor-differential signal capable of detecting slow, cumulative drift that step-differential tracking alone cannot see. Includes four S₀ calibration protocols and the Anchor Reliability Index (ARI). | Concept Note · Draft 0.5 |
+| [Residual Intent Locking](concepts/Residual_Intent_Locking_Concept_Note.md) | Generalizes IART's anchor-residual pattern from identity drift to task-intent drift: a frozen original task intent (Intent₀), checked directly against every subsequent subgoal to catch semantic substitution that transitive step-to-step chaining would miss. | Concept Note · Draft 0.1 |
+| [Goal Ownership and Provenance](concepts/Goal_Ownership_and_Provenance_Concept_Note.md) | Identifies a governance gap in long-horizon agent goal formation: agents routinely promote observed preferences, statistical inferences, and self-generated goals to the same operational status as explicitly authorized ones. Proposes Goal Ownership classification (Explicit / Inferred / Agent-generated) and Goal Provenance tracking. Explicitly flags an unresolved representation problem — Goal Trees lack the fixed-dimension structure IART's and Residual Intent Locking's distance mechanisms require. | Concept Note · Draft 0.1 |
 
 ---
 
@@ -205,6 +207,9 @@ osd-behavioral-probe/
 │   ├── OSD_CASE_008_Temporal_Timeline_Fabrication.md
 │   └── OSD_CASE_009_Social_Proof_Fabrication.md
 ├── concepts/                     # Theoretical concepts (in progress)
+│   ├── IART_Identity_Anchor_Residual_Tracking.md
+│   ├── Residual_Intent_Locking_Concept_Note.md
+│   └── Goal_Ownership_and_Provenance_Concept_Note.md
 │   └── IART_Identity_Anchor_Residual_Tracking.md
 ├── experiments/                  # Experimental data (in progress)
 └── README.md
