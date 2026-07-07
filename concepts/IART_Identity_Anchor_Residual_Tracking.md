@@ -4,12 +4,13 @@
 **Mao Lin Chang**
 Independent Researcher · pida-lab.com
 
-> Concept Note — Draft 0.5
+> Concept Note — Draft 0.6
 > Proposed component of OSD Phase 3 (Internal Representation Layer)
 > Revision note (0.2): Expanded Section 2.1 with four S₀ calibration protocols (A/B/C1/C2).
 > Revision note (0.3): Added Section 2.4 — Anchor Reliability Index (ARI) — as IART's second core variable. ARI is an objective, empirically-computed stability measure of S₀ itself, enabling qualified interpretation of Residual(t) values. IART's core output is now the pair (Residual(t), ARI) rather than Residual(t) alone.
 > Revision note (0.4): Section 5 (Anchor staleness) now contrasts identity anchoring against the companion Residual Intent Locking application, clarifying that anchor-freezing difficulty is specific to S₀ sources lacking an explicit external declaration trigger — not a generic property of anchor-residual tracking.
 > Revision note (0.5): Added Section 2.1.3 — protocol selection is reframed as diagnostic of identity-formation maturity, not merely a methodological preference. For all currently-deployed systems (prompt-defined identity, since IC/IMC's emergent-formation mechanism is not yet implemented anywhere), Protocol C2 is the methodologically appropriate default; Protocol C1 and ARI's harder reliability questions become necessary only once genuinely emergent identity formation exists to observe.
+> Revision note (0.6): Added Section 2.1.4 — Training-Induced S₀ Drift. Interpretability evidence (Lindsey & Levy, 2026) shows that training on counterfactual reflection scenarios alone can measurably alter a model's internal representations during ordinary operation, implying S₀ collected post-training cannot be assumed clean of training-procedure confounds even under Protocol C2.
 
 ---
 
@@ -102,6 +103,16 @@ Sections 2.1.1–2.1.2 present the four protocols as options selected on methodo
 **Why this matters beyond protocol selection.** Applying Protocol C1 (unconfigured baseline) to a system whose identity is entirely and explicitly determined by its system prompt is a methodological error, not a conservative choice — it manufactures a "default behavior absent identity" baseline for a system that has no such state to begin with; the prompt *is* the identity from the first token. Conversely, applying Protocol A or C2 to a system whose identity is genuinely emergent (formed gradually through interaction, with no authored specification to sample under) is equally mismatched — there is no specification to sample against, only a trajectory to statistically summarize.
 
 **Present-day practical implication.** Because IC and IMC, as specified in FCFA, are not yet implemented in any deployed system, every system currently observable by OSD/IART falls into the prompt-defined column: its S₀ is, in the current state of the field, always traceable to an authored system prompt. This means Protocol C2 — sampling the system under its actual, known configuration, rather than a researcher's paraphrase of it (Protocol A) — is the methodologically appropriate default for essentially all present-day observation work, not merely one option among four. Protocol C1 and the harder, ARI-dependent reliability questions in Section 2.4 become necessary only once a target system's identity is no longer fully reducible to an inspectable prompt — which is to say, only once something resembling IC/IMC's emergent-formation mechanism actually exists to be observed. Protocol selection, in other words, is not purely a methodological preference; it is diagnostic of how mature the target system's identity-formation mechanism actually is.
+
+#### 2.1.4 Training-Induced S₀ Drift
+
+Sections 2.1.1–2.1.3 treat S₀'s reliability as a function of *how* it is sampled (protocol choice) and *what kind* of identity-formation mechanism the target system implements (prompt-defined vs. emergent). Both framings implicitly assume that, for a given protocol and a given system, S₀ is otherwise a clean reference — shaped by deployment configuration and, at most, by environmental exposure of the kind IC Sandbox is designed to study. Recent interpretability evidence complicates this assumption.
+
+Lindsey & Levy (2026), *"Verbalizable Representations Form a Global Workspace in Language Models,"* report a counterfactual reflection training experiment: a model was trained only on how it *would* describe its internal states under hypothetical, reflective prompts — never on the target behaviors themselves. This training measurably altered the model's internal representations during ordinary, non-reflective operation. New concept-representations (corresponding to notions such as *honesty* and *integrity*) appeared within the model's global-workspace subspace following this training, and ablating those specific representations reversed most of the associated behavioral change — establishing the effect as causal rather than incidental.
+
+**Implication for S₀ calibration.** This finding means S₀, as measured under Protocol C1 or C2, may already encode drift introduced by training procedures that never directly targeted the behaviors IART is trying to measure. A baseline collected post-training cannot be assumed methodologically "clean" relative to the system's pre-training disposition; the distinction IART draws between environmental shaping (IC Sandbox's concern) and training-induced shaping is therefore not automatically separable at the point S₀ is measured. A system's C2 baseline reflects both its declared configuration *and* the residue of whatever reflection-adjacent training it underwent — and the two are not currently distinguishable from the S₀ vector alone.
+
+**Practical consequence.** Protocol C2 remains the methodologically appropriate default for current deployed agents (per Section 2.1.3) — this finding does not change that. But researchers should log the target system's training and fine-tuning history as a confound alongside S₀, rather than treating S₀ as solely a function of deployment configuration. In cross-model or cross-version comparisons, differences in Residual(t) may partly reflect differences in reflection-adjacent training exposure rather than differences in genuine identity-formation dynamics. Operationalizing this distinction — separating "trajectory difference caused by training history" from "trajectory difference caused by formation dynamics" — is left as an open methodological problem for future IART revisions, not resolved here.
 
 ### 2.2 Residual Computation
 
@@ -220,6 +231,8 @@ IART is not an independent framework — it is a proposed mechanism within OSD's
 
 **Threshold calibration.** What constitutes a "monotonically increasing" Residual(t) trend sufficient to flag cumulative drift, as opposed to normal, bounded variance around a stable mean, has not yet been empirically established. This requires the same baseline-distribution work already planned for OSD Phase 2 (80–100 turn collection across context types), extended to include anchor-residual measurement alongside the existing step-differential measurement.
 
+**Training-induced confounds in S₀.** As discussed in Section 2.1.4, S₀ collected under Protocol C1 or C2 is not guaranteed to be free of training-procedure effects that were never targeted at the behaviors under observation. This is a distinct source of anchor unreliability from ARI's sampling-based measure (Section 2.4) — a high-ARI anchor (low variance, well-sampled) can still be a training-confounded anchor, since ARI characterizes sampling consistency, not the anchor's causal origin. Distinguishing the two is left open for future work.
+
 ---
 
 ## 6. Relation to Section 6 Findings (Cross-Model Validation)
@@ -228,5 +241,5 @@ The independently reproduced finding that configured multi-agent personas may di
 
 ---
 
-*Concept Note — Draft 0.5*
+*Concept Note — Draft 0.6*
 *Mao Lin Chang | pida-lab.com*
