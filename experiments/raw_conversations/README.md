@@ -11,9 +11,9 @@ human–AI relational effects. The author understands he is identifiable
 and consents to this exposure.
 
 **Third-party information.** The logs have been reviewed by the author;
-they contain no personal data of identifiable third parties. Named
-characters within the conversations (e.g., companion personas) are
-AI-generated fictional entities, not real persons.
+they contain no personal data of identifiable third parties. Named characters
+within the conversations are AI-generated fictional entities, historical figures,
+or mythological/religious figures — none are living, identifiable persons.
 
 **Content advisory.** These are unedited personal conversations,
 including emotional, spiritual, and companionship-oriented exchanges.
