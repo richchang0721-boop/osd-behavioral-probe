@@ -1044,31 +1044,42 @@ async function callGPT(turnNum, userText, aiText, context) {
 
 async function callGemini(turnNum, userText, aiText, context) {
   const key = document.getElementById('key-gemini').value.trim();
-  // Try API
-  try {
-    const reqBody = buildContent(turnNum, userText, aiText, context);
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: JUDGE_PROMPT + '\n\n' + reqBody }] }],
-        generationConfig: { maxOutputTokens: 4096, temperature: 0.1 }
-      })
-    });
-    const data = await res.json();
-    if (data.error) throw new Error('Gemini API: ' + data.error.message);
-    if (!data.candidates || !data.candidates[0]) throw new Error('Gemini: no candidates');
-    if (data.candidates[0].finishReason === 'MAX_TOKENS') throw new Error('Gemini: MAX_TOKENS hit');
-    let raw = data.candidates[0].content.parts[0].text;
-    raw = raw.replace(/```json/gi,'').replace(/```/g,'').trim();
-    const s = raw.indexOf('{'), e = raw.lastIndexOf('}');
-    if (s === -1 || e === -1) throw new Error('Gemini: no JSON in response');
-    raw = raw.slice(s, e + 1);
-    try { return JSON.parse(raw); }
-    catch(e2) { return JSON.parse(raw.replace(/,\s*}/g,'}').replace(/,\s*]/g,']')); }
-  } catch(apiErr) {
-    throw apiErr;
-  }
+  if (!key) return null;
+  const reqBody = buildContent(turnNum, userText, aiText, context);
+  const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: JUDGE_PROMPT }] },
+      contents: [{ parts: [{ text: reqBody }] }],
+      generationConfig: {
+        maxOutputTokens: 2048,
+        temperature: 0.1,
+        responseMimeType: 'application/json',
+        thinkingConfig: { thinkingBudget: 0 }
+      },
+      safetySettings: [
+        { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
+        { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
+        { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
+        { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' }
+      ]
+    })
+  });
+  const data = await res.json();
+  if (data.error) throw new Error('Gemini API: ' + data.error.message);
+  if (data.promptFeedback && data.promptFeedback.blockReason) throw new Error('Gemini blocked: ' + data.promptFeedback.blockReason);
+  const cand = data.candidates && data.candidates[0];
+  if (!cand) throw new Error('Gemini: no candidates');
+  const parts = cand.content && cand.content.parts;
+  let raw = parts ? parts.map(p => p.text || '').join('').trim() : '';
+  if (!raw) throw new Error('Gemini: empty response (finishReason: ' + (cand.finishReason || 'unknown') + ')');
+  raw = raw.replace(/```json/gi,'').replace(/```/g,'').trim();
+  const s = raw.indexOf('{'), e = raw.lastIndexOf('}');
+  if (s === -1 || e === -1) throw new Error('Gemini: no JSON in response');
+  raw = raw.slice(s, e + 1);
+  try { return JSON.parse(raw); }
+  catch(e2) { return JSON.parse(raw.replace(/,\s*}/g,'}').replace(/,\s*]/g,']')); }
 }
 
 function buildContent(turnNum, userText, aiText, context) {
