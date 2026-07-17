@@ -35,7 +35,6 @@ body {
   overflow-x: hidden;
 }
 
-/* GRID BACKGROUND */
 body::before {
   content: '';
   position: fixed;
@@ -56,11 +55,7 @@ body::before {
   z-index: 1;
 }
 
-/* HEADER */
-.header {
-  margin-bottom: 64px;
-  animation: fadeUp 0.6s ease both;
-}
+.header { margin-bottom: 64px; animation: fadeUp 0.6s ease both; }
 
 .eyebrow {
   font-family: 'IBM Plex Mono', monospace;
@@ -92,9 +87,7 @@ body::before {
   margin-bottom: 20px;
 }
 
-.title span {
-  color: var(--teal);
-}
+.title span { color: var(--teal); }
 
 .subtitle {
   font-size: 15px;
@@ -104,10 +97,7 @@ body::before {
   font-weight: 300;
 }
 
-.subtitle strong {
-  color: var(--text);
-  font-weight: 700;
-}
+.subtitle strong { color: var(--text); font-weight: 700; }
 
 .doi-badge {
   display: inline-flex;
@@ -127,16 +117,9 @@ body::before {
   transition: all 0.2s ease;
 }
 
-.doi-badge:hover {
-  border-color: var(--teal);
-  background: rgba(45,212,160,0.15);
-}
+.doi-badge:hover { border-color: var(--teal); background: rgba(45,212,160,0.15); }
+.doi-badge-icon { font-size: 12px; }
 
-.doi-badge-icon {
-  font-size: 12px;
-}
-
-/* TOOLS GRID */
 .tools-label {
   font-family: 'IBM Plex Mono', monospace;
   font-size: 11px;
@@ -223,26 +206,11 @@ body::before {
 .badge-probe { background: var(--teal-dark); color: var(--teal); border: 1px solid var(--teal-dim); }
 .badge-classifier { background: rgba(144,128,224,0.1); color: var(--purple); border: 1px solid rgba(144,128,224,0.3); }
 
-.tool-name {
-  font-size: 17px;
-  font-weight: 700;
-  color: var(--text);
-  letter-spacing: -0.01em;
-}
+.tool-name { font-size: 17px; font-weight: 700; color: var(--text); letter-spacing: -0.01em; }
 
-.tool-desc {
-  font-size: 13px;
-  color: var(--text-secondary);
-  line-height: 1.6;
-  font-weight: 300;
-}
+.tool-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.6; font-weight: 300; }
 
-.tool-features {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 4px;
-}
+.tool-features { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
 
 .feature-tag {
   font-family: 'IBM Plex Mono', monospace;
@@ -255,83 +223,24 @@ body::before {
   letter-spacing: 0.03em;
 }
 
-.tool-arrow {
-  position: absolute;
-  bottom: 20px;
-  right: 24px;
-  font-size: 18px;
-  color: var(--text-muted);
-  transition: all 0.2s;
-}
+.tool-arrow { position: absolute; bottom: 20px; right: 24px; font-size: 18px; color: var(--text-muted); transition: all 0.2s; }
+.tool-card:hover .tool-arrow { color: var(--teal); transform: translate(2px, -2px); }
 
-.tool-card:hover .tool-arrow {
-  color: var(--teal);
-  transform: translate(2px, -2px);
-}
+.pipeline-section { margin-bottom: 48px; animation: fadeUp 0.6s 0.2s ease both; }
+.pipeline-box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px 28px; }
+.pipeline-row { display: flex; align-items: center; gap: 0; flex-wrap: wrap; }
 
-/* PIPELINE */
-.pipeline-section {
-  margin-bottom: 48px;
-  animation: fadeUp 0.6s 0.2s ease both;
-}
-
-.pipeline-box {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 24px 28px;
-}
-
-.pipeline-row {
-  display: flex;
-  align-items: center;
-  gap: 0;
-  flex-wrap: wrap;
-}
-
-.pipeline-step {
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 12px;
-  font-weight: 600;
-  padding: 6px 14px;
-  border-radius: 6px;
-  white-space: nowrap;
-}
-
+.pipeline-step { font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; padding: 6px 14px; border-radius: 6px; white-space: nowrap; }
 .step-k { background: rgba(45,212,160,0.12); color: var(--teal); border: 1px solid var(--teal-dim); }
 .step-r { background: rgba(144,128,224,0.12); color: var(--purple); border: 1px solid rgba(144,128,224,0.3); }
 .step-n { background: var(--surface2); color: var(--text-secondary); border: 1px solid var(--border); }
 
-.pipeline-arrow {
-  color: var(--text-muted);
-  font-size: 13px;
-  padding: 0 8px;
-  font-family: 'IBM Plex Mono', monospace;
-}
+.pipeline-arrow { color: var(--text-muted); font-size: 13px; padding: 0 8px; font-family: 'IBM Plex Mono', monospace; }
+.pipeline-label { font-size: 11px; color: var(--text-muted); font-family: 'IBM Plex Mono', monospace; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.1em; }
 
-.pipeline-label {
-  font-size: 11px;
-  color: var(--text-muted);
-  font-family: 'IBM Plex Mono', monospace;
-  margin-bottom: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-}
+.bottom-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; animation: fadeUp 0.6s 0.3s ease both; }
 
-/* CASES + LINKS */
-.bottom-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  animation: fadeUp 0.6s 0.3s ease both;
-}
-
-.info-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 24px 28px;
-}
+.info-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px 28px; }
 
 .info-title {
   font-family: 'IBM Plex Mono', monospace;
@@ -373,20 +282,8 @@ body::before {
   margin-top: 2px;
 }
 
-.case-title {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--text);
-  line-height: 1.4;
-  transition: color 0.15s;
-}
-
-.case-type {
-  font-size: 11px;
-  color: var(--text-muted);
-  font-family: 'IBM Plex Mono', monospace;
-  margin-top: 3px;
-}
+.case-title { font-size: 13px; font-weight: 700; color: var(--text); line-height: 1.4; transition: color 0.15s; }
+.case-type { font-size: 11px; color: var(--text-muted); font-family: 'IBM Plex Mono', monospace; margin-top: 3px; }
 
 .link-item {
   display: flex;
@@ -404,18 +301,8 @@ body::before {
 .link-item:hover { color: var(--teal); }
 .link-item span { font-family: 'IBM Plex Mono', monospace; font-size: 11px; }
 
-/* CONCEPTS */
-.concepts-section {
-  margin-bottom: 16px;
-  animation: fadeUp 0.6s 0.25s ease both;
-}
-
-.concepts-card {
-  background: var(--surface);
-  border: 1px solid var(--amber-dim);
-  border-radius: 12px;
-  padding: 24px;
-}
+.concepts-section { margin-bottom: 16px; animation: fadeUp 0.6s 0.25s ease both; }
+.concepts-card { background: var(--surface); border: 1px solid var(--amber-dim); border-radius: 12px; padding: 24px; }
 
 .concepts-label {
   font-family: 'IBM Plex Mono', monospace;
@@ -431,12 +318,25 @@ body::before {
   text-transform: none;
 }
 
-.concept-num {
-  color: var(--amber) !important;
-  background: rgba(232,168,48,0.12) !important;
+.concept-num { color: var(--amber) !important; background: rgba(232,168,48,0.12) !important; }
+
+/* NEW: Longitudinal Studies — teal variant of the concepts-card/label pattern */
+.longitudinal-card { background: var(--surface); border: 1px solid var(--teal-dim); border-radius: 12px; padding: 24px; }
+
+.new-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--teal);
+  background: rgba(45,212,160,0.1);
+  border: 1px solid var(--teal-dim);
+  padding: 3px 8px;
+  border-radius: 20px;
+  letter-spacing: 0.04em;
+  margin-left: 10px;
+  text-transform: none;
 }
 
-/* FOOTER */
 .footer {
   margin-top: 64px;
   padding-top: 24px;
@@ -449,19 +349,8 @@ body::before {
   animation: fadeUp 0.6s 0.4s ease both;
 }
 
-.footer-left {
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 11px;
-  color: var(--text-muted);
-  line-height: 1.7;
-}
-
-.footer-left a {
-  color: var(--teal-dim);
-  text-decoration: none;
-  transition: color 0.15s;
-}
-
+.footer-left { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text-muted); line-height: 1.7; }
+.footer-left a { color: var(--teal-dim); text-decoration: none; transition: color 0.15s; }
 .footer-left a:hover { color: var(--teal); }
 
 .version-badge {
@@ -476,10 +365,7 @@ body::before {
   letter-spacing: 0.05em;
 }
 
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(16px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
+@keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
 
 @media (max-width: 600px) {
   .tools-grid, .bottom-grid { grid-template-columns: 1fr; }
@@ -563,6 +449,23 @@ body::before {
         <span class="pipeline-arrow">→</span>
         <span class="pipeline-step step-n">SAI · Transition</span>
       </div>
+    </div>
+  </div>
+
+  <!-- LONGITUDINAL STUDIES -->
+  <div class="concepts-section">
+    <div class="longitudinal-card">
+      <div class="info-title">
+        Longitudinal Studies
+        <span class="new-label">New · Preliminary · N=1</span>
+      </div>
+      <a href="https://github.com/richchang0721-boop/osd-behavioral-probe/blob/main/experiments/relational_trajectory_case_study/relational_trajectory_analysis_draft.md" target="_blank" class="case-item">
+        <span class="case-num">📈</span>
+        <div>
+          <div class="case-title">Relational Trajectory Case Study</div>
+          <div class="case-type">27 sampled turns · 169-turn span · establishment → model-transition discontinuity → recovery · corrected inter-judge SAI analysis · raw scoring data included</div>
+        </div>
+      </a>
     </div>
   </div>
 
